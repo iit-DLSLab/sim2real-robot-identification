@@ -360,8 +360,8 @@ class Data_Collection_Node(Node):
             desired_joint_pos.RR = self.stand_up_and_down_actions.RR
 
             # Impedence Loop
-            Kp = self.Kp_stand_up_and_down*0.0
-            Kd = self.Kd_stand_up_and_down*0.0
+            Kp = self.Kp_stand_up_and_down
+            Kd = self.Kd_stand_up_and_down
             
 
         elif(self.console.isActivated and (self.console.setpoint_collection or self.console.falling_collection)):
@@ -404,6 +404,16 @@ class Data_Collection_Node(Node):
                     self._save_trajectory_data()
                     self.console.trajectory_collection = False
                     print("Trajectory collection completed.")
+        else:
+            desired_joint_pos = LegsAttr(*[np.zeros((1, int(env.mjModel.nu/4))) for _ in range(4)])
+            desired_joint_pos.FL = self.stand_up_and_down_actions.FL
+            desired_joint_pos.FR = self.stand_up_and_down_actions.FR
+            desired_joint_pos.RL = self.stand_up_and_down_actions.RL
+            desired_joint_pos.RR = self.stand_up_and_down_actions.RR
+
+            # Impedence Loop
+            Kp = self.Kp_stand_up_and_down*0.0
+            Kd = self.Kd_stand_up_and_down*0.0
             
         
         if USE_MUJOCO_SIMULATION:
