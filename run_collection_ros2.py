@@ -97,14 +97,27 @@ class Data_Collection_Node(Node):
         self.Kd_stand_up_and_down = config.Kd_walking
 
         self.calibration_reference_joint_positions = None
+        
+
+        # Chirp Trajectory only variables
+        self.chirp_traj_time = 4.0
+        self.calibration_reference_calf_trajectory = None
+        self.calibration_reference_thigh_trajectory = None
+        self.calibration_reference_hip_trajectory = None
+        self.hip_setpoint2 = 0.6
+        self.thigh_setpoint2 = 0.5
+        self.calf_setpoin2 = -1.2
+        self.hip_setpoint1 = self.stand_up_and_down_actions.FL[0]
+        self.thigh_setpoint1 = self.stand_up_and_down_actions.FL[1]
+        self.calf_setpoint1 = self.stand_up_and_down_actions.FL[2]
+        
+        
         self.saved_actual_joints_position = None
         self.saved_actual_joints_velocity = None
         self.saved_desired_joints_position = None
         self.saved_desired_joints_velocity = None
         self.num_traj_saved = 0
 
-        # Trajectory only variables
-        self.chirp_traj_time = 6.0
 
 
         # Interactive Command Line ----------------------------
@@ -140,14 +153,27 @@ class Data_Collection_Node(Node):
         """Initialize calibration trajectory with random values"""
         print("Generating first a trajectory..")
 
-        # Generate a linear trajectory between actual joint positions and a random setpoint
-        hip_setpoint = np.random.uniform(-0.0, 0.5)
-        thigh_setpoint = np.random.uniform(-1.0, 0.5)
-        calf_setpoint = np.random.uniform(-0., 1.5)
+        # Generate a linear trajectory between actual joint positions and two setpoint
 
-        self.calibration_reference_hip_trajectory = np.interp(np.linspace(0, self.chirp_traj_time, num=100), [0, self.chirp_traj_time], [0.0, hip_setpoint])
-        self.calibration_reference_thigh_trajectory = np.interp(np.linspace(0, self.chirp_traj_time, num=100), [0, self.chirp_traj_time], [1.21, 1.21+thigh_setpoint])
-        self.calibration_reference_calf_trajectory = np.interp(np.linspace(0, self.chirp_traj_time, num=100), [0, self.chirp_traj_time], [-2.794, -2.794+calf_setpoint])
+        t = np.linspace(0, self.chirp_traj_time, num=100)
+
+        self.calibration_reference_hip_trajectory = np.interp(
+            t,
+            [0, self.chirp_traj_time/2, self.chirp_traj_time],
+            [self.hip_setpoint1, self.hip_setpoint2, self.hip_setpoint1]
+        )
+
+        self.calibration_reference_thigh_trajectory = np.interp(
+            t,
+            [0, self.chirp_traj_time/2, self.chirp_traj_time],
+            [self.thigh_setpoint1, self.thigh_setpoint2, self.thigh_setpoint1]
+        )
+
+        self.calibration_reference_calf_trajectory = np.interp(
+            t,
+            [0, self.chirp_traj_time/2, self.chirp_traj_time],
+            [self.calf_setpoint1, self.calf_setpoin2, self.calf_setpoint1]
+        )
 
         self.start_collection_time = time.time()
 
@@ -175,7 +201,7 @@ class Data_Collection_Node(Node):
                 # Free falling!!
                 Kp = 0.0
                 Kd = 0.0
-                desired_joint_pos = LegsAttr(*[np.zeros((1, int(env.mjModel.nu/4))) for _ in range(4)])
+                desired_joint_pos = LegsAttr(*[np.zeros((int(env.mjModel.nu/4, ))) for _ in range(4)])
                 desired_joint_pos.FL = np.zeros((int(env.mjModel.nu/4),)) + 20.
                 desired_joint_pos.FR = np.zeros((int(env.mjModel.nu/4),)) + 20.
                 desired_joint_pos.RL = np.zeros((int(env.mjModel.nu/4),)) + 20.
@@ -184,7 +210,7 @@ class Data_Collection_Node(Node):
                 # Reach the target
                 Kp = self.Kp_stand_up_and_down
                 Kd = self.Kd_stand_up_and_down
-                desired_joint_pos = LegsAttr(*[np.zeros((1, int(env.mjModel.nu/4))) for _ in range(4)])
+                desired_joint_pos = LegsAttr(*[np.zeros((int(env.mjModel.nu/4, ))) for _ in range(4)])
                 desired_joint_pos.FL = copy.deepcopy(self.calibration_reference_joint_positions.FL)
                 desired_joint_pos.FR = copy.deepcopy(self.calibration_reference_joint_positions.FR)
                 desired_joint_pos.RL = copy.deepcopy(self.calibration_reference_joint_positions.RL)
@@ -196,13 +222,15 @@ class Data_Collection_Node(Node):
             Kd = self.Kd_stand_up_and_down
 
             time_traj = self.start_collection_time - time.time()
-            desired_joint_pos = LegsAttr(*[np.zeros((1, int(env.mjModel.nu/4))) for _ in range(4)])
+            desired_joint_pos = LegsAttr(*[np.zeros((int(env.mjModel.nu/4, ))) for _ in range(4)])
             desired_joint_pos.FL[0] = self.calibration_reference_hip_trajectory[int((time_traj/self.chirp_traj_time)*100)]
             desired_joint_pos.FL[1] = self.calibration_reference_thigh_trajectory[int((time_traj/self.chirp_traj_time)*100)]
             desired_joint_pos.FL[2] = self.calibration_reference_calf_trajectory[int((time_traj/self.chirp_traj_time)*100)]
             desired_joint_pos.FR = copy.deepcopy(desired_joint_pos.FL)
+            desired_joint_pos.FR[0] = -desired_joint_pos.FR[0]
             desired_joint_pos.RL = copy.deepcopy(desired_joint_pos.FL)
             desired_joint_pos.RR = copy.deepcopy(desired_joint_pos.FL)
+            desired_joint_pos.RR[0] = -desired_joint_pos.RR[0]
 
         return desired_joint_pos, Kp, Kd
 
@@ -248,8 +276,7 @@ class Data_Collection_Node(Node):
             return time.time() - self.start_collection_time > self.chirp_traj_time
 
     def _save_trajectory_data(self):
-        """Save collected trajectory data to file and reset buffers"""
-        self.calibration_reference_joint_positions = None
+        """Save collected trajectory data to file"""
 
         # Saving to file trajectory
         desired_fps = CONTROL_FREQ
@@ -352,11 +379,12 @@ class Data_Collection_Node(Node):
             # Check if collection is complete
             collection_complete = self._check_collection_complete(joints_pos, desired_joint_pos)
             if collection_complete:
+                self.calibration_reference_joint_positions = None
                 self._save_trajectory_data()
 
         elif(self.console.isActivated and self.console.trajectory_collection):
             # Initialize setpoint if needed
-            if self.calibration_reference_joint_positions is None:
+            if self.calibration_reference_hip_trajectory is None:
                 self._initialize_calibration_trajectory()
 
             # Get desired joint positions and control gains based on collection type
@@ -368,9 +396,14 @@ class Data_Collection_Node(Node):
             # Check if collection is complete            
             collection_complete = self._check_collection_complete(joints_pos, desired_joint_pos)
             if collection_complete:
+                self.calibration_reference_hip_trajectory = None
+                self.calibration_reference_thigh_trajectory = None
+                self.calibration_reference_calf_trajectory = None
                 self.chirp_traj_time -= 0.2 # Reduce trajectory time for next trajectory
-                if(self.chirp_traj_time < 1.0):
+                if(self.chirp_traj_time < 0.4):
                     self._save_trajectory_data()
+                    self.console.trajectory_collection = False
+                    print("Trajectory collection completed.")
             
         
         if USE_MUJOCO_SIMULATION:
