@@ -102,7 +102,7 @@ GO2_CFG = ArticulationCfg(
 class Go2PaceCfg(PaceCfg):
     """Pace configuration for Go2 robot."""
     robot_name: str = "go2_sim"
-    data_dir: str = "go2_sim/chirp_data.pt"  # located in pace_sim2real/data/go2_sim/chirp_data.pt
+    data_dir: str = f"{ISAAC_ASSET_DIR}/../../dataset/go2/chirp_data.pt"  # located in pace_sim2real/data/go2_sim/chirp_data.pt
     bounds_params: torch.Tensor = torch.zeros((49, 2))  # 12 + 12 + 12 + 12 + 1 = 49 parameters to optimize
     joint_order: list[str] = [
         "FL_hip_joint",
