@@ -292,7 +292,7 @@ class Data_Collection_Node(Node):
             "fps": desired_fps,
         }
         # Save the data to an .npy file
-        output_file = f"datasets/traj_{self.num_traj_saved}.npy"
+        output_file = "datasets/" + config.robot + f"/traj_{self.num_traj_saved}.npy"
         np.save(output_file, data)
 
         self.num_traj_saved += 1
