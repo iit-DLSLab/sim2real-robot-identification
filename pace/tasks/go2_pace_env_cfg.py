@@ -93,6 +93,7 @@ GO2_CFG = ArticulationCfg(
         joint_vel={".*": 0.0},
     ),
 
+    actuators={"hip": GO2_HIP_ACTUATOR_CFG, "thigh": GO2_THIGH_ACTUATOR_CFG, "calf": GO2_CALF_ACTUATOR_CFG},
     soft_joint_pos_limit_factor=0.95,
 )
 
@@ -133,8 +134,7 @@ class Go2PaceCfg(PaceCfg):
 @configclass
 class Go2PaceSceneCfg(PaceSim2realSceneCfg):
     """Configuration for Go2 robot in Pace Sim2Real environment."""
-    robot: ArticulationCfg = GO2_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot",
-                                              actuators={"hip": GO2_HIP_ACTUATOR_CFG, "thigh": GO2_THIGH_ACTUATOR_CFG, "calf": GO2_CALF_ACTUATOR_CFG})
+    robot: ArticulationCfg = GO2_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
 @configclass
 class Go2PaceEnvCfg(PaceSim2realEnvCfg):
