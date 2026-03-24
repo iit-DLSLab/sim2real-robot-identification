@@ -11,13 +11,13 @@ Work in progress for supporting arms and mujoco identification, PRs are very wel
 This repo works the best with [unitree_ros2_dls](https://github.com/iit-DLSLab/unitree_ros2_dls) for communicating with unitree go2 and b2 robots. Soon, will support different arms, such as unitree z1, and agilex piper arms using - the last using [piper_ros2_dls2](https://github.com/iit-DLSLab/piper_ros2_dls2).
 
 ```bash
-python3 run_collection_ros2.py
+python3 run_collection_quadruped_ros2.py
 ```
 
 ## Run a calibration in IsaacLab
 
 ```bash
-TODO
+python3 sysid_isaaclab/my_fit.py --headless
 ```
 
 
