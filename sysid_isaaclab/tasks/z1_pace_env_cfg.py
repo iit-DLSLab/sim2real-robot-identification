@@ -66,7 +66,7 @@ Z1_GRIPPER_ACTUATOR_CFG = PaceDCMotorCfg(
 
 Z1_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
-        usd_path=f"{ISAAC_ASSET_DIR}/../../models/z1_description/usd/z1.usd",
+        usd_path=f"{ISAAC_ASSET_DIR}/../../robot_model/z1/z1.usd",
         activate_contact_sensors=True,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,

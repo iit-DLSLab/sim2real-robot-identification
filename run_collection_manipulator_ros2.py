@@ -71,7 +71,7 @@ class Data_Collection_Node(Node):
 
 
         # Create the environment -----------------------------------------------------------
-        self.mjModel = mujoco.MjModel.from_xml_path(dir_path + "/models/" + config.robot + "_description/xml/" + config.robot + ".xml")
+        self.mjModel = mujoco.MjModel.from_xml_path(dir_path + "/robot_model/" + config.robot + "/" + config.robot + ".xml")
         self.mjData = mujoco.MjData(self.mjModel)
 
         if(USE_MUJOCO_RENDER):
