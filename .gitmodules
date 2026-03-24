@@ -1,0 +1,3 @@
+[submodule "sysid_isaaclab/pace-sim2real"]
+	path = sysid_isaaclab/pace-sim2real
+	url = https://github.com/leggedrobotics/pace-sim2real.git
