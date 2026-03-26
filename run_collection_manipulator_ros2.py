@@ -125,9 +125,12 @@ class Data_Collection_Node(Node):
 
     def get_arm_blind_state_callback(self, msg):        
         self.arm_joints_position = np.array(msg.joints_position)
-        self.arm_joints_velocity = np.array(msg.joints_velocity)
+        self.arm_joints_position = np.append(self.arm_joints_position, msg.gripper_position)
 
-        self.first_message_arm_joints_arrived = True
+        self.arm_joints_velocity = np.array(msg.joints_velocity)
+        self.arm_joints_velocity = np.append(self.arm_joints_velocity, msg.gripper_velocity)
+
+        self.first_message_joints_arrived = True
 
         
 

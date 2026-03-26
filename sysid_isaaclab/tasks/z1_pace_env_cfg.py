@@ -21,8 +21,8 @@ Z1_13456_ACTUATOR_CFG = PaceDCMotorCfg(
     saturation_effort=30.,
     effort_limit=30.0,
     velocity_limit=3.14,
-    stiffness={".*": 20.0},  # P gain in Nm/rad
-    damping={".*": 1.5},  # D gain in Nm s/rad
+    stiffness={".*": 150.0},  # P gain in Nm/rad
+    damping={".*": 5.},  # D gain in Nm s/rad
     encoder_bias={".*": 0.0},  # encoder bias in radians
     # note: modeling coulomb friction if friction = dynamic_friction
     # > in newer Isaac Sim versions, friction is renamed to static_friction
@@ -37,8 +37,8 @@ Z1_2_ACTUATOR_CFG = PaceDCMotorCfg(
     saturation_effort=30.,
     effort_limit=60.0,
     velocity_limit=3.14,
-    stiffness={".*": 20.0},  # P gain in Nm/rad
-    damping={".*": 1.5},  # D gain in Nm s/rad
+    stiffness={".*": 150.},  # P gain in Nm/rad
+    damping={".*": 5.},  # D gain in Nm s/rad
     encoder_bias={".*": 0.0},  # encoder bias in radians
     # note: modeling coulomb friction if friction = dynamic_friction
     # > in newer Isaac Sim versions, friction is renamed to static_friction
@@ -53,8 +53,8 @@ Z1_GRIPPER_ACTUATOR_CFG = PaceDCMotorCfg(
     saturation_effort=5.,
     effort_limit=5.0,
     velocity_limit=3.14,
-    stiffness={".*": 20.0},  # P gain in Nm/rad
-    damping={".*": 1.5},  # D gain in Nm s/rad
+    stiffness={".*": 150.0},  # P gain in Nm/rad
+    damping={".*": 5.},  # D gain in Nm s/rad
     encoder_bias={".*": 0.0},  # encoder bias in radians
     # note: modeling coulomb friction if friction = dynamic_friction
     # > in newer Isaac Sim versions, friction is renamed to static_friction
@@ -122,7 +122,7 @@ class Z1PaceCfg(PaceCfg):
         self.bounds_params[:7, 0] = 1e-5
         self.bounds_params[:7, 1] = 1.0  # armature between 1e-5 - 1.0 [kgm2]
         self.bounds_params[7:14, 1] = 7.0  # dof_damping between 0.0 - 7.0 [Nm s/rad]
-        self.bounds_params[14:21, 1] = 0.5  # friction between 0.0 - 0.5
+        self.bounds_params[14:21, 1] = 1.0  # friction between 0.0 - 0.5
         self.bounds_params[21:28, 0] = -0.1
         self.bounds_params[21:28, 1] = 0.1  # bias between -0.1 - 0.1 [rad]
         self.bounds_params[28, 1] = 5.0  # delay between 0.0 - 5.0 [sim steps]

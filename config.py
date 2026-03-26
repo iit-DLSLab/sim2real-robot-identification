@@ -19,7 +19,7 @@ elif(robot == "hyqreal2"):
     Kd_walking = 20.
 
 elif(robot =="z1"):
-    Kp = 50.
+    Kp = 150.
     Kd = 5.
 
 else:
