@@ -1,18 +1,18 @@
-# Description: This script is used to run the policy on the real robot
-
-# Authors:
-# Giulio Turrisi
-
 import os
+
+# Fail-safe: if not chosent otherwise before,
+# communicate only on localhost to avoid network issues with ROS2
+os.environ.setdefault("ROS_LOCALHOST_ONLY", "1")
+
+print(
+    "ROS 2 network mode:",
+    "LOCALHOST" if os.environ["ROS_LOCALHOST_ONLY"] == "1" else "NETWORK",
+)
+
 import sys
 import shlex
 import subprocess
 from pathlib import Path
-dir_path = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(dir_path+"/mujoco/")
-sys.path.append(dir_path+"/../")
-sys.path.append(dir_path+"/../scripts/rsl_rl")
-
 
 dir_path = Path(__file__).resolve().parent
 sys.path.append(str(dir_path / ".."))
@@ -24,11 +24,11 @@ if not setup_bash.exists():
     print("Building the msgs first...")
     subprocess.run(["colcon", "build"], cwd=ros_ws, check=True)
 
-if os.environ.get("BASIC_LOCOMOTION_ROS2_SOURCED") != "1":
+if os.environ.get("SIM2REAL_ROBOT_IDENTIFICATION_SOURCED") != "1":
     print("Sourcing ROS2 workspace and restarting script...")
     cmd = (
         f"source {shlex.quote(str(setup_bash))} && "
-        "export BASIC_LOCOMOTION_ROS2_SOURCED=1 && "
+        "export SIM2REAL_ROBOT_IDENTIFICATION_SOURCED=1 && "
         f"exec {shlex.quote(sys.executable)} "
         + " ".join(shlex.quote(arg) for arg in [str(Path(__file__).resolve()), *sys.argv[1:]])
     )
@@ -490,7 +490,6 @@ class Data_Collection_Node(Node):
                 self.calibration_reference_hip_trajectory = None
                 self.calibration_reference_thigh_trajectory = None
                 self.calibration_reference_calf_trajectory = None
-                print("self.chirp_traj_time: ", self.chirp_traj_time)
                 if(self.chirp_traj_time >= 0.6):
                     self.chirp_traj_time -= 0.2 # Reduce trajectory time for next trajectory
                 else:

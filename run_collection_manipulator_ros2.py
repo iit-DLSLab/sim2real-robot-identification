@@ -1,18 +1,18 @@
-# Description: This script is used to run the policy on the real robot
-
-# Authors:
-# Giulio Turrisi
-
 import os
+
+# Fail-safe: if not chosent otherwise before,
+# communicate only on localhost to avoid network issues with ROS2
+os.environ.setdefault("ROS_LOCALHOST_ONLY", "1")
+
+print(
+    "ROS 2 network mode:",
+    "LOCALHOST" if os.environ["ROS_LOCALHOST_ONLY"] == "1" else "NETWORK",
+)
+
 import sys
 import shlex
 import subprocess
 from pathlib import Path
-dir_path = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(dir_path+"/mujoco/")
-sys.path.append(dir_path+"/../")
-sys.path.append(dir_path+"/../scripts/rsl_rl")
-
 
 dir_path = Path(__file__).resolve().parent
 sys.path.append(str(dir_path / ".."))
@@ -33,6 +33,7 @@ if os.environ.get("SIM2REAL_ROBOT_IDENTIFICATION_SOURCED") != "1":
         + " ".join(shlex.quote(arg) for arg in [str(Path(__file__).resolve()), *sys.argv[1:]])
     )
     os.execv("/bin/bash", ["bash", "-c", cmd])
+
 
 import rclpy 
 from rclpy.node import Node 
