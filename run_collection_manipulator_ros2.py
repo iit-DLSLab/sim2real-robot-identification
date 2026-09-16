@@ -466,7 +466,7 @@ class Data_Collection_Node(Node):
                     self.chirp_traj_time -= 0.2 # Reduce trajectory time for next trajectory
                 else:
                     self.chirp_traj_time -= 0.1 # Reduce trajectory time for next trajectory slower
-                if(self.chirp_traj_time < 0.3):
+                if(self.chirp_traj_time < 0.2):
                     self.idle_joint_position = copy.deepcopy(desired_joint_pos)
                     self._save_trajectory_data("trajectory")
                     self.chirp_traj_time = INITIAL_CHIRP_TRAJECTORY_DURATION

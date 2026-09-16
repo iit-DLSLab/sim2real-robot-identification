@@ -60,8 +60,8 @@ os.system("renice -n -21 -p " + str(pid))
 os.system("echo -20 > /proc/" + str(pid) + "/autogroup")
 #for real time, launch it with chrt -r 99 python3 run_controller.py
 
-USE_MUJOCO_RENDER = False
-USE_MUJOCO_SIMULATION = False
+USE_MUJOCO_RENDER = True
+USE_MUJOCO_SIMULATION = True
 
 
 CONTROL_FREQ = config.frequency_collection # Hz 
@@ -490,11 +490,12 @@ class Data_Collection_Node(Node):
                 self.calibration_reference_hip_trajectory = None
                 self.calibration_reference_thigh_trajectory = None
                 self.calibration_reference_calf_trajectory = None
+                print("self.chirp_traj_time: ", self.chirp_traj_time)
                 if(self.chirp_traj_time >= 0.6):
                     self.chirp_traj_time -= 0.2 # Reduce trajectory time for next trajectory
                 else:
                     self.chirp_traj_time -= 0.1 # Reduce trajectory time for next trajectory slower
-                if(self.chirp_traj_time < 0.3):
+                if(self.chirp_traj_time < 0.2):
                     self._save_trajectory_data("trajectory")
                     self.chirp_traj_time = INITIAL_CHIRP_TRAJECTORY_DURATION
                     self.console.trajectory_collection = False
