@@ -98,7 +98,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--identify-delays",
         action="store_true",
-        help="Estimate one control delay in seconds for each actuator.",
+        help="Estimate one shared control delay in seconds for all actuators.",
     )
     parser.add_argument(
         "--delay-num-samples",
@@ -109,7 +109,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--delay-interp",
         choices=("linear", "zoh", "cubic"),
-        default="cubic",
+        default="linear",
         help=(
             "Delay history interpolation (default: linear). zoh is zero-order "
             "hold and can give zero delay gradients during optimization."
@@ -121,14 +121,14 @@ def parse_args() -> argparse.Namespace:
         type=float,
         metavar=("LOWER", "UPPER"),
         default=(0.0, 0.01),
-        help="Delay bounds in seconds (default: 0 to delay-num-samples * timestep).",
+        help="Shared delay bounds in seconds (default: 0 to 0.01).",
     )
     parser.add_argument(
         "--damping-bounds",
         nargs=2,
         type=float,
         metavar=("LOWER", "UPPER"),
-        default=(0.001, 3.0),
+        default=(0.001, 0.5),
         help="Bounds for each joint damping parameter.",
     )
     parser.add_argument(
@@ -136,7 +136,7 @@ def parse_args() -> argparse.Namespace:
         nargs=2,
         type=float,
         metavar=("LOWER", "UPPER"),
-        default=(0.001, 0.6),
+        default=(0.001, 0.5),
         help="Bounds for each joint armature parameter.",
     )
     parser.add_argument(
@@ -144,7 +144,7 @@ def parse_args() -> argparse.Namespace:
         nargs=2,
         type=float,
         metavar=("LOWER", "UPPER"),
-        default=(0.001, 3.0),
+        default=(0.001, 0.5),
         help="Bounds for each joint frictionloss parameter.",
     )
     parser.add_argument(
@@ -245,24 +245,27 @@ def configure_actuator_delays(spec, num_samples: int, interp: str, bounds=None):
     return float(lower), float(upper)
 
 
-def add_actuator_delay_parameters(params, spec, bounds):
-    """Use native actuator delays so fitting and reports share the same model."""
+def add_shared_actuator_delay_parameter(params, spec, bounds):
+    """Fit a single native control delay shared by every actuator."""
+    actuators = list(spec.actuators)
+    if not actuators:
+        raise ValueError("Delay identification requires at least one actuator.")
     lower, upper = bounds
     # Start above the one-timestep plateau, where interpolation has a gradient.
     initial_delay = (max(lower, spec.option.timestep) + upper) / 2
-    for actuator in spec.actuators:
-        def modifier(model_spec, param, actuator_name=actuator.name):
-            model_spec.actuator(actuator_name).delay = float(param.value[0])
+    def modifier(model_spec, param):
+        for actuator in model_spec.actuators:
+            actuator.delay = float(param.value[0])
 
-        parameter = sysid.Parameter(
-            f"{actuator.name}_delay",
-            nominal=actuator.delay,
-            min_value=lower,
-            max_value=upper,
-            modifier=modifier,
-        )
-        parameter.value[:] = initial_delay
-        params.add(parameter)
+    parameter = sysid.Parameter(
+        "shared_actuator_delay",
+        nominal=float(np.mean([actuator.delay for actuator in actuators])),
+        min_value=lower,
+        max_value=upper,
+        modifier=modifier,
+    )
+    parameter.value[:] = initial_delay
+    params.add(parameter)
 
 
 def _is_piper_robot(robot: str) -> bool:
@@ -517,7 +520,7 @@ def main() -> None:
             fixed_base_spec, args.delay_num_samples, args.delay_interp, args.delay_bounds
         )
         print(
-            f"Estimating actuator delays in {delay_bounds} seconds; "
+            f"Estimating one shared actuator delay in {delay_bounds} seconds; "
             f"history={args.delay_num_samples}, interpolation={args.delay_interp}."
         )
         if args.delay_interp == "zoh":
@@ -575,7 +578,7 @@ def main() -> None:
         tie_quadruped_inertias=args.tie_quadruped_inertias,
     )
     if delay_bounds is not None:
-        add_actuator_delay_parameters(params, fixed_base_spec, delay_bounds)
+        add_shared_actuator_delay_parameter(params, fixed_base_spec, delay_bounds)
     
     clip_parameter_values_inside_bounds(params)
     # The optimizer flags values within 0.1% of a bound, even after clipping.
