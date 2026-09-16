@@ -34,11 +34,11 @@ The models (usd and xml) identified so far can be found in the folder **robot_mo
 2. create an environment using the file in the folder [deploy/installation](./deploy/installation):
 
 ```bash
-# conda
+# for conda
 conda env create -f mamba_environment.yaml
 conda activate sim2real_robot_identification_env
 
-# pixi
+# for pixi
 pixi shell --manifest-path deploy/installation/pixi.toml 
 ```
 
