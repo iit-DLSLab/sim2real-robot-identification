@@ -72,6 +72,13 @@ python3 sysid_isaaclab/my_fit.py --headless
 
 ## Run a calibration in Mujoco
 
+Fitting includes measured joint position and velocity. Position residuals have
+weight 1.0 and velocity residuals have weight 0.1 by default, configurable with
+`--velocity-weight` (use 0 to disable the velocity contribution), applied before the optimizer
+squares them (velocity therefore contributes a factor of 0.01 to squared cost).
+Both use MuJoCo sysid's per-signal normalization; zero-valued signals use a unit
+scale to keep stationary-joint residuals finite.
+
 ```bash
 python3 sysid_mujoco/my_fit.py 
 ```

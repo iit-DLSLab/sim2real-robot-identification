@@ -490,8 +490,11 @@ class Data_Collection_Node(Node):
                 self.calibration_reference_hip_trajectory = None
                 self.calibration_reference_thigh_trajectory = None
                 self.calibration_reference_calf_trajectory = None
-                self.chirp_traj_time -= 0.2 # Reduce trajectory time for next trajectory
-                if(self.chirp_traj_time < 0.4):
+                if(self.chirp_traj_time >= 0.6):
+                    self.chirp_traj_time -= 0.2 # Reduce trajectory time for next trajectory
+                else:
+                    self.chirp_traj_time -= 0.1 # Reduce trajectory time for next trajectory slower
+                if(self.chirp_traj_time < 0.3):
                     self._save_trajectory_data("trajectory")
                     self.chirp_traj_time = INITIAL_CHIRP_TRAJECTORY_DURATION
                     self.console.trajectory_collection = False

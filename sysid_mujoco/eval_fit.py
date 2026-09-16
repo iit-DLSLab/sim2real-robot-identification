@@ -31,6 +31,7 @@ from sysid_mujoco.common import load_processed_dataset
 
 
 def parse_args() -> argparse.Namespace:
+    # Select the recording, model variant and plot output for an open-loop replay.
     parser = argparse.ArgumentParser(
         description=(
             "Evaluate model fitting quality by replaying a dataset in MuJoCo and "
@@ -72,6 +73,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def default_output_dir(robot: str) -> Path:
+    # Keep evaluation outputs separate from fitting reports and previous replays.
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     return REPO_ROOT / "sysid_mujoco" / "results" / robot / f"eval_{timestamp}"
 
@@ -101,6 +103,7 @@ def _insert_piper_mimic_joint8(values: np.ndarray, model_joint_names: list[str])
 
     joint7_index = source_joint_names.index("joint7")
     joint8_index = model_joint_names.index("joint8")
+    # Reconstruct the passive finger with opposite sign in the model's joint order.
     joint8_values = -values[:, joint7_index : joint7_index + 1]
     return np.concatenate(
         (
@@ -117,6 +120,7 @@ def _extend_piper_trajectory_if_needed(
     model: mujoco.MjModel,
 ) -> ProcessedTrajectory:
     model_joint_names = _model_joint_names(model)
+    # The mimic finger adds a state column but no extra actuator command.
     return replace(
         trajectory,
         measured_qpos=_insert_piper_mimic_joint8(trajectory.measured_qpos, model_joint_names),
@@ -127,11 +131,13 @@ def _extend_piper_trajectory_if_needed(
 
 
 def _build_eval_model(robot: str, dataset_path: Path) -> tuple[mujoco.MjModel, Path]:
+    # Compile a provisional model to map the recorded gains to actuator order.
     provisional_xml = build_fixed_base_model_xml(robot)
     provisional_model = mujoco.MjModel.from_xml_path(str(provisional_xml))
     joint_names, _ = get_actuated_joint_and_actuator_names(mujoco, provisional_model)
     kp, kd = load_dataset_actuator_gains(dataset_path, num_joints=len(joint_names))
 
+    # Use the recording's controller gains when rebuilding the replay model.
     model_xml = build_fixed_base_model_xml(
         robot,
         actuator_gains=build_actuator_gain_map(joint_names, kp, kd),
@@ -151,6 +157,7 @@ def _build_fixed_base_model_xml_from_source(
 
     tree = ET.parse(source_xml)
     root = tree.getroot()
+    # Match the fitting setup: fixed base, joint control and no contact forces.
     _remove_all_by_tag(root, "freejoint")
     _remove_all_by_tag(root, "keyframe")
     _remove_all_by_tag(root, "accelerometer")
@@ -166,6 +173,7 @@ def _build_fixed_base_model_xml_from_source(
 
 
 def _get_original_model_xml(robot: str) -> Path:
+    # The original variant is explicit; do not silently fall back to another model.
     original_xml = REPO_ROOT / "robot_model" / robot / f"{robot}_original.xml"
     if not original_xml.is_file():
         raise FileNotFoundError(
@@ -179,6 +187,7 @@ def _build_eval_model_from_original(
     robot: str,
     dataset_path: Path,
 ) -> tuple[mujoco.MjModel, Path]:
+    # Apply the same preprocessing and gain mapping to the original model variant.
     original_xml = _get_original_model_xml(robot)
     provisional_xml = _build_fixed_base_model_xml_from_source(robot, original_xml)
     provisional_model = mujoco.MjModel.from_xml_path(str(provisional_xml))
@@ -211,6 +220,8 @@ def simulate_open_loop(
             f"but model has {model.nu} actuators."
         )
 
+    # Initialize from measurements once; later states evolve freely in simulation.
+    # This exposes accumulated model error instead of resetting it every sample.
     data.qpos[:] = trajectory.measured_qpos[0]
     data.qvel[:] = trajectory.measured_qvel[0]
     mujoco.mj_forward(model, data)
@@ -228,6 +239,8 @@ def simulate_open_loop(
                 f"index {step}: dt={dt}."
             )
 
+        # Approximate the sample interval with whole simulation steps and hold
+        # the recorded control constant over that interval.
         substeps = max(1, int(round(dt / model.opt.timestep)))
         data.ctrl[:] = ctrl[step]
         for _ in range(substeps):
@@ -244,6 +257,8 @@ def compute_metrics(
     simulated_qpos: np.ndarray,
     joint_names: list[str],
 ) -> dict[str, object]:
+    # Report position errors in joint units, without the fitting loss normalization.
+    # Average over time first, then average the per-joint metrics for the summary.
     error = simulated_qpos - measured_qpos
     rmse_per_joint = np.sqrt(np.mean(error**2, axis=0))
     mae_per_joint = np.mean(np.abs(error), axis=0)
@@ -274,6 +289,7 @@ def plot_joint_trajectories(
     show: bool,
 ) -> None:
     if not show:
+        # Select a noninteractive backend before importing pyplot for headless runs.
         import matplotlib
 
         matplotlib.use("Agg")
@@ -290,6 +306,7 @@ def plot_joint_trajectories(
         squeeze=False,
     )
 
+    # Use one panel per joint and hide unused cells in the final row.
     for joint_index, axis in enumerate(axes.flat):
         if joint_index >= num_joints:
             axis.set_visible(False)
@@ -330,6 +347,7 @@ def plot_joint_trajectories(
     )
     figure.tight_layout()
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    # Save the figure regardless of whether an interactive window is requested.
     figure.savefig(output_path, dpi=180, bbox_inches="tight")
     print(f"Saved trajectory plot to {output_path}")
 
@@ -349,6 +367,7 @@ def main() -> None:
     output_dir = output_dir.expanduser().resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    # Compare either the scene-selected model or the explicitly requested original.
     if args.original:
         model, model_xml = _build_eval_model_from_original(args.robot, dataset_path)
     else:
@@ -361,6 +380,7 @@ def main() -> None:
     )
     processed = _extend_piper_trajectory_if_needed(processed, model)
 
+    # Replay the complete recording from its measured initial state.
     simulated_qpos, simulated_qvel = simulate_open_loop(model, processed)
     metrics = compute_metrics(
         measured_qpos=processed.measured_qpos,
@@ -368,6 +388,7 @@ def main() -> None:
         joint_names=processed.joint_names,
     )
 
+    # Store input provenance alongside the metrics so results can be traced back.
     metrics_payload = {
         "robot": args.robot,
         "dataset": str(dataset_path),

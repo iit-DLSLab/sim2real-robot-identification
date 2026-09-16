@@ -462,8 +462,11 @@ class Data_Collection_Node(Node):
             collection_complete = self._check_collection_complete(joints_pos, desired_joint_pos)
             if collection_complete:
                 self.calibration_reference_trajectory = None
-                self.chirp_traj_time -= 0.2 # Reduce trajectory time for next trajectory
-                if(self.chirp_traj_time < 0.4):
+                if(self.chirp_traj_time >= 0.6):
+                    self.chirp_traj_time -= 0.2 # Reduce trajectory time for next trajectory
+                else:
+                    self.chirp_traj_time -= 0.1 # Reduce trajectory time for next trajectory slower
+                if(self.chirp_traj_time < 0.3):
                     self.idle_joint_position = copy.deepcopy(desired_joint_pos)
                     self._save_trajectory_data("trajectory")
                     self.chirp_traj_time = INITIAL_CHIRP_TRAJECTORY_DURATION

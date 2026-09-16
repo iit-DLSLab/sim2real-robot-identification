@@ -4,6 +4,7 @@ import argparse
 from contextlib import contextmanager
 from dataclasses import replace
 from datetime import datetime
+from functools import partial
 from pathlib import Path
 import sys
 import xml.etree.ElementTree as ET
@@ -45,11 +46,13 @@ def default_dataset_paths(robot: str) -> list[Path]:
 
 
 def default_output_dir(robot: str) -> Path:
+    # Give each run a timestamped directory for its identification report.
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     return REPO_ROOT / "sysid_mujoco" / "results" / robot / timestamp
 
 
 def parse_args() -> argparse.Namespace:
+    # CLI options control datasets, solver settings and optional parameter families.
     parser = argparse.ArgumentParser(
         description=(
             "Estimate per-joint dynamics and optional per-link inertial "
@@ -96,6 +99,12 @@ def parse_args() -> argparse.Namespace:
         help="If > 0, split each source trajectory into non-overlapping chunks of this size.",
     )
     parser.add_argument(
+        "--velocity-weight",
+        type=float,
+        default=0.01,
+        help="Nonnegative velocity residual weight (default: 0.1; 0 disables its contribution).",
+    )
+    parser.add_argument(
         "--identify-delays",
         action="store_true",
         help="Estimate one shared control delay in seconds for all actuators.",
@@ -128,7 +137,7 @@ def parse_args() -> argparse.Namespace:
         nargs=2,
         type=float,
         metavar=("LOWER", "UPPER"),
-        default=(0.001, 0.5),
+        default=(0.001, 2.0),
         help="Bounds for each joint damping parameter.",
     )
     parser.add_argument(
@@ -144,7 +153,7 @@ def parse_args() -> argparse.Namespace:
         nargs=2,
         type=float,
         metavar=("LOWER", "UPPER"),
-        default=(0.001, 0.5),
+        default=(0.001, 2.0),
         help="Bounds for each joint frictionloss parameter.",
     )
     parser.add_argument(
@@ -222,13 +231,18 @@ def parse_args() -> argparse.Namespace:
             "and RR bodies (default: enabled)."
         ),
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    if not np.isfinite(args.velocity_weight) or args.velocity_weight < 0:
+        parser.error("--velocity-weight must be finite and nonnegative")
+    return args
 
 
 def configure_actuator_delays(spec, num_samples: int, interp: str, bounds=None):
     """Allocate history before compiling states; return safe delay bounds."""
     if num_samples < 2:
         raise ValueError("`--delay-num-samples` must be at least 2.")
+    # The buffer stores num_samples control steps; bounds are expressed in seconds.
+    # Longer delays would require commands older than the available history.
     capacity = num_samples * spec.option.timestep
     lower, upper = (0.0, capacity) if bounds is None else bounds
     if not np.isfinite([lower, upper]).all() or not 0 <= lower < upper <= capacity:
@@ -238,6 +252,7 @@ def configure_actuator_delays(spec, num_samples: int, interp: str, bounds=None):
         )
     if upper <= spec.option.timestep:
         raise ValueError("The delay upper bound must exceed one simulation timestep.")
+    # These are MuJoCo interpolation enum values, not polynomial degrees.
     interpolation_order = {"zoh": 0, "linear": 1, "cubic": 2}[interp]
     for actuator in spec.actuators:
         actuator.nsample = num_samples
@@ -251,9 +266,11 @@ def add_shared_actuator_delay_parameter(params, spec, bounds):
     if not actuators:
         raise ValueError("Delay identification requires at least one actuator.")
     lower, upper = bounds
-    # Start above the one-timestep plateau, where interpolation has a gradient.
+    # Positive delays below one timestep all read the previous control sample.
+    # Start above this plateau so linear/cubic interpolation can expose a gradient.
     initial_delay = (max(lower, spec.option.timestep) + upper) / 2
     def modifier(model_spec, param):
+        # Each optimizer candidate supplies one scalar, applied to every actuator.
         for actuator in model_spec.actuators:
             actuator.delay = float(param.value[0])
 
@@ -272,6 +289,53 @@ def _is_piper_robot(robot: str) -> bool:
     return robot == "piper_l"
 
 
+def add_joint_velocity_sensors(spec):
+    """Observe velocity for each joint already observed by a position sensor."""
+    # Reuse existing velocity sensors to avoid measuring the same joint twice.
+    velocity_joints = {
+        sensor.objname for sensor in spec.sensors
+        if sensor.type == mujoco.mjtSensor.mjSENS_JOINTVEL
+    }
+    # Iterate over a snapshot because add_sensor changes the spec's sensor list.
+    for sensor in list(spec.sensors):
+        if sensor.type != mujoco.mjtSensor.mjSENS_JOINTPOS:
+            continue
+        if sensor.objname not in velocity_joints:
+            spec.add_sensor(
+                name=f"{sensor.name}_velocity",
+                type=mujoco.mjtSensor.mjSENS_JOINTVEL,
+                objtype=mujoco.mjtObj.mjOBJ_JOINT,
+                objname=sensor.objname,
+            )
+            velocity_joints.add(sensor.objname)
+
+
+def joint_position_velocity_residual(
+    params, predicted, measured, model, return_pred_all, *, velocity_weight=0.1, **kwargs
+):
+    """Keep sysid normalization, with finite residuals for stationary joints."""
+    # Compare simulation and measurements only at matching timestamps within
+    # the rollout window. This aligns samples without introducing another delay.
+    measured = sysid.apply_delayed_ts_window(measured, predicted, 0.0, 0.0)
+    predicted = predicted.resample(measured.times)
+    # Unlisted position sensors retain weight 1.0. The velocity weight multiplies
+    # the residual, so its contribution to squared cost scales by weight ** 2.
+    sensor_weights = {
+        model.sensor(i).name: velocity_weight
+        for i in range(model.nsensor)
+        if model.sensor_type[i] == mujoco.mjtSensor.mjSENS_JOINTVEL
+    }
+    residual = sysid.weighted_diff(
+        predicted.data, measured.data, model=model, sensor_weights=sensor_weights
+    )
+    # Preserve sysid's normalization independently for each measured signal.
+    scale = np.linalg.norm(measured.data, axis=0) / np.sqrt(2)
+    # MuJoCo's default normalization divides by zero for a zero-valued signal.
+    # Use unit scale for these channels so stationary joints remain in the fit.
+    scale = np.where(scale > np.finfo(float).eps, scale, 1.0)
+    return residual / scale, predicted, measured
+
+
 def _model_joint_names(model) -> list[str]:
     return [model.joint(joint_id).name for joint_id in range(model.njnt)]
 
@@ -282,6 +346,7 @@ def _scale_actuator_gains_for_fit(
     kp: np.ndarray,
     kd: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray]:
+    # Copy recorded gains before applying optional Piper-specific corrections.
     scaled_kp = np.asarray(kp, dtype=np.float64).copy()
     scaled_kd = np.asarray(kd, dtype=np.float64).copy()
     if not _is_piper_robot(robot):
@@ -309,6 +374,7 @@ def _prepare_fixed_base_xml_for_fit(robot: str, model_xml: Path) -> Path:
         raise ValueError("Piper model must contain `joint8`.")
 
     sensor_element = root.find("sensor")
+    # Piper recordings omit the second finger, but fitting observes its mimic state.
     if sensor_element is None:
         sensor_element = ET.SubElement(root, "sensor")
 
@@ -351,6 +417,7 @@ def _insert_piper_mimic_joint8(
 
     joint7_index = source_joint_names.index("joint7")
     joint8_index = model_joint_names.index("joint8")
+    # The second finger moves with the opposite sign; insert it in model order.
     joint8_values = -values[:, joint7_index:joint7_index + 1]
     return np.concatenate(
         (
@@ -367,6 +434,7 @@ def _extend_piper_state_to_joint8(
     model,
 ) -> ProcessedTrajectory:
     model_joint_names = _model_joint_names(model)
+    # Extend states and references only: the passive mimic joint has no own control.
     return replace(
         trajectory,
         measured_qpos=_insert_piper_mimic_joint8(
@@ -400,6 +468,7 @@ def build_model_sequences_from_source(
     control_ts = []
     initial_states = []
 
+    # Separate recordings have independent initial conditions and history buffers.
     for dataset_path in dataset_paths:
 
         processed = load_processed_dataset(
@@ -409,6 +478,7 @@ def build_model_sequences_from_source(
         )
         if _is_piper_robot(robot):
             processed = _extend_piper_state_to_joint8(processed, model)
+        # Each chunk becomes one rollout while all rollouts share fitted parameters.
         for chunk in chunk_processed_trajectory(processed, chunk_size):
             measurement_data, control_data, initial_state = processed_to_sysid_trajectory(sysid, model, chunk)
             measurement_ts.append(measurement_data)
@@ -443,10 +513,12 @@ def _safe_parameter_distribution_spacing():
     try:
         yield
     finally:
+        # Restore Plotly even if report generation raises an exception.
         plotly_subplots.make_subplots = original_make_subplots
 
 
 def display_report(report, report_path: Path) -> Path:
+    # Always save HTML; notebook display is an optional convenience.
     html = report.build()
     report_path.write_text(html, encoding="utf-8")
     try:
@@ -463,6 +535,7 @@ def display_report(report, report_path: Path) -> Path:
 
 def main() -> None:
     args = parse_args()
+    # Without explicit paths, fit every recording available for the selected robot.
     if args.dataset is None:
         args.dataset = default_dataset_paths(args.robot)
     if not args.dataset:
@@ -484,9 +557,11 @@ def main() -> None:
             "identification flag."
         )
 
+    # One model is shared across recordings, using gains from the first dataset.
     dataset_kp, dataset_kd = load_dataset_actuator_gains(args.dataset[0])
 
 
+    # Compile once to discover actuator order before assigning the recorded gains.
     fixed_base_xml = _prepare_fixed_base_xml_for_fit(
         args.robot,
         build_fixed_base_model_xml(args.robot),
@@ -501,6 +576,7 @@ def main() -> None:
         dataset_kp,
         dataset_kd,
     )
+    # Rebuild with the gain map used during all candidate simulations.
     fixed_base_xml = _prepare_fixed_base_xml_for_fit(
         args.robot,
         build_fixed_base_model_xml(
@@ -514,6 +590,9 @@ def main() -> None:
     )
     fixed_base_spec = mujoco.MjSpec.from_file(str(fixed_base_xml))
     fixed_base_spec.option.timestep = 1.0 / config.frequency_collection
+    # Sensors and delay buffers affect model/state dimensions, so configure them
+    # before compiling the model used to build the dataset's initial states.
+    add_joint_velocity_sensors(fixed_base_spec)
     delay_bounds = None
     if args.identify_delays:
         delay_bounds = configure_actuator_delays(
@@ -538,6 +617,7 @@ def main() -> None:
 
     joint_names = [fixed_base_model.joint(i).name for i in range(fixed_base_model.njnt)]
     sequence_names = [f"sequence_{index:03d}" for index, _ in enumerate(measurement_ts)]
+    # Pair each independent trajectory with the same spec for joint optimization.
     model_sequences = [sysid.ModelSequences(
         args.robot,
         fixed_base_spec,
@@ -547,6 +627,7 @@ def main() -> None:
         measurement_ts[i],
     ) for i in range(len(measurement_ts))]
 
+    # Joint bounds are absolute; inertial bounds use scales or local CoM offsets.
     bounds = {
         "damping": tuple(float(value) for value in args.damping_bounds),
         "armature": tuple(float(value) for value in args.armature_bounds),
@@ -582,10 +663,18 @@ def main() -> None:
     
     clip_parameter_values_inside_bounds(params)
     # The optimizer flags values within 0.1% of a bound, even after clipping.
+    # Move only those components 5% into the interval from the nearby bound.
     params.move_off_bounds()
    
-    residual_fn = sysid.build_residual_fn(models_sequences=model_sequences)
+    # Bind the CLI weight once so optimization and the report use the same loss.
+    residual_fn = sysid.build_residual_fn(
+        models_sequences=model_sequences,
+        modify_residual=partial(
+            joint_position_velocity_residual, velocity_weight=args.velocity_weight
+        ),
+    )
 
+    # Estimate all free components together; Jacobian scaling handles mixed units.
     opt_params, opt_result = sysid.optimize(
         initial_params=params,
         residual_fn=residual_fn,
@@ -598,6 +687,7 @@ def main() -> None:
     output_dir = args.output_dir or default_output_dir(args.robot)
     output_dir.mkdir(parents=True, exist_ok=True)
     
+    # Compare initial and optimized parameters using the same weighted residual.
     with _safe_parameter_distribution_spacing():
         report = sysid.default_report(
             models_sequences=model_sequences,

@@ -26,6 +26,8 @@ GENERATED_DIR = SYSID_DIR / "generated"
 
 @dataclass
 class ProcessedTrajectory:
+    # Arrays use rows for time samples and columns for joints or actuators.
+    # Keep measured states separate from references and actual simulation inputs.
     source_path: Path
     sequence_name: str
     times: np.ndarray
@@ -42,11 +44,14 @@ class ProcessedTrajectory:
 def load_torch_dataset(dataset_path: Path) -> dict[str, np.ndarray]:
     import torch
 
+    # Load on CPU even when the recording was saved from a CUDA device.
     try:
         raw_data = torch.load(dataset_path, map_location="cpu", weights_only=False)
     except TypeError:
+        # Older PyTorch releases do not accept the weights_only keyword.
         raw_data = torch.load(dataset_path, map_location="cpu")
 
+    # Downstream preprocessing and MuJoCo operate on NumPy arrays.
     dataset: dict[str, np.ndarray] = {}
     for key, value in raw_data.items():
         if torch.is_tensor(value):
@@ -69,6 +74,7 @@ def load_dataset_actuator_gains(
     if 'kd' not in dataset:
         print(f"{dataset_path} does not contain `kd` switching to config default")
 
+    # Recorded gains take precedence; older datasets use the configured defaults.
     kp = dataset['kp'] if 'kp' in dataset else np.full(num_joints, config.kp, dtype=np.float64)  
     kd = dataset['kd'] if 'kd' in dataset else np.full(num_joints, config.kd, dtype=np.float64)
     return kp, kd
@@ -96,6 +102,7 @@ def get_robot_scene_path(robot: str) -> Path:
 
 
 def get_robot_model_xml_path(robot: str) -> Path:
+    # Follow the scene's include so fitting uses the model selected by the scene.
     scene_path = get_robot_scene_path(robot)
     scene_tree = ET.parse(scene_path)
     scene_root = scene_tree.getroot()
@@ -109,12 +116,14 @@ def get_robot_model_xml_path(robot: str) -> Path:
 
 
 def _remove_all_by_tag(root: ET.Element, tag: str) -> None:
+    # Copy each child list so removing an element cannot skip its next sibling.
     for parent in root.iter():
         for child in list(parent):
             if child.tag == tag:
                 parent.remove(child)
 
 def _absolutize_file_attributes(root: ET.Element, base_dir: Path) -> None:
+    # Generated XML lives elsewhere; preserve asset paths relative to the source.
     for element in root.iter():
         file_attribute = element.get("file")
         if file_attribute is None:
@@ -130,6 +139,7 @@ def _rewrite_actuators_as_general(
     actuator_gains: dict[str, tuple[float, float]] | None = None,
 ) -> None:
     actuator_element = root.find("actuator")
+    # Preserve actuator order, transmission and limits when replacing motor tags.
     source_actuators: list[dict[str, str]] = []
     if actuator_element is not None:
         for actuator in actuator_element:
@@ -169,6 +179,8 @@ def _rewrite_actuators_as_general(
         if joint_range is not None:
             actuator_spec["ctrlrange"] = joint_range
         if actuator_gains is not None and joint_name in actuator_gains:
+            # Affine bias implements force = kp * ctrl - kp * q - kd * qvel.
+            # The control input is therefore a desired position, not a torque.
             kp, kd = actuator_gains[joint_name]
             actuator_spec["biastype"] = "affine"
             actuator_spec["gainprm"] = f"{kp:.12g}"
@@ -177,6 +189,7 @@ def _rewrite_actuators_as_general(
 
 
 def _disable_all_collisions(root):
+    # Remove contact forces from the joint-dynamics identification model.
     for geom in root.iter("geom"):
         geom.set("contype", "0")
         geom.set("conaffinity", "0")
@@ -194,6 +207,8 @@ def build_fixed_base_model_xml(
 
     tree = ET.parse(source_xml)
     root = tree.getroot()
+    # Fix the floating base and discard keyframes tied to its old state layout.
+    # Base-motion sensors are not part of the joint trajectory fitting objective.
     _remove_all_by_tag(root, "freejoint")
     _remove_all_by_tag(root, "keyframe")
     _remove_all_by_tag(root, "accelerometer")
@@ -216,6 +231,7 @@ def build_fixed_base_model_xml(
 
 
 def get_actuated_joint_and_actuator_names(mujoco, model) -> tuple[list[str], list[str]]:
+    # Preserve actuator order: dataset controls and gain arrays use this layout.
     joint_names: list[str] = []
     actuator_names: list[str] = []
     for actuator_id in range(model.nu):
@@ -237,6 +253,7 @@ def compute_pd_torques(
     kd: float,
     ctrlrange: np.ndarray | None = None,
 ) -> np.ndarray:
+    # Reconstruct commands when a motor-mode recording has no torque channel.
     ctrl = kp * (desired_qpos - measured_qpos) - kd * (desired_qvel - measured_qvel)
     if ctrlrange is None:
         return ctrl
@@ -263,6 +280,7 @@ def load_processed_dataset(
     elif "des_dof_vel" not in dataset:
         raise KeyError(f"{dataset_path} must contain `des_dof_vel`.")
 
+    # Use float64 consistently with MuJoCo and the numerical optimizer.
     times = np.asarray(dataset["time"], dtype=np.float64)
     measured_qpos = np.asarray(dataset["dof_pos"], dtype=np.float64)
     measured_qvel = np.asarray(dataset["dof_vel"], dtype=np.float64)
@@ -292,6 +310,7 @@ def load_processed_dataset(
     if actuator_mode == "general":
         ctrl = desired_qpos
     elif actuator_mode == "motor":
+        # Prefer recorded torques; otherwise reconstruct them from the PD signals.
         if "des_dof_torque" in dataset:
             ctrl = np.asarray(dataset["des_dof_torque"], dtype=np.float64)
         else:
@@ -337,6 +356,8 @@ def chunk_processed_trajectory(
     start = 0
     chunk_index = 0
     print(trajectory.times)
+    # Each complete chunk is simulated independently, starting at local time zero.
+    # A trailing incomplete chunk is omitted; a shorter whole recording is kept.
     while start + chunk_size <= num_steps:
         end = start + chunk_size
         chunks.append(
@@ -360,16 +381,37 @@ def chunk_processed_trajectory(
 
 
 def processed_to_sysid_trajectory(sysid, model, trajectory: ProcessedTrajectory):
-    
+    import mujoco
+
+    # Match the model's sensor layout explicitly, including interleaved sensors
+    # and the Piper mimic joint, rather than assuming position-only columns.
+    joint_indices = {name: i for i, name in enumerate(trajectory.joint_names)}
+    measurement_columns = []
+    for sensor_id in range(model.nsensor):
+        sensor_type = model.sensor_type[sensor_id]
+        if sensor_type == mujoco.mjtSensor.mjSENS_JOINTPOS:
+            values = trajectory.measured_qpos
+        elif sensor_type == mujoco.mjtSensor.mjSENS_JOINTVEL:
+            values = trajectory.measured_qvel
+        else:
+            raise ValueError(
+                f"Unsupported fitting sensor: {model.sensor(sensor_id).name}"
+            )
+        # Resolve the joint by name: sensor order need not match dataset columns.
+        joint_name = model.joint(int(model.sensor_objid[sensor_id])).name
+        measurement_columns.append(values[:, joint_indices[joint_name]])
+
     measurement_ts = sysid.TimeSeries.from_names(
         trajectory.times,
-        trajectory.measured_qpos,
+        np.column_stack(measurement_columns),
         model
     )
     control_ts = sysid.TimeSeries(
         trajectory.times,
         trajectory.ctrl
     )
+    # Initialize both position and velocity from the first measured sample;
+    # create_initial_state also allocates history entries for the compiled model.
     initial_state = sysid.create_initial_state(
         model,
         trajectory.measured_qpos[0],
@@ -429,6 +471,8 @@ def get_identifiable_body_names(
         if not body.name or _as_scalar(body.mass) <= 0.0:
             continue
 
+        # Include fixed child links too when an ancestor has an articulated joint.
+        # Exclude masses attached only to the fixed base because it cannot move.
         ancestor_id = body_id
         while ancestor_id > 0:
             if int(model.body_jntnum[ancestor_id]) > 0:
@@ -468,6 +512,7 @@ def make_shared_joint_attribute_modifier(
     def modifier(spec, param):
         for joint_name in joint_names:
             joint = spec.joint(joint_name)
+            # MjSpec stores damping in an array, unlike the scalar fields below.
             if attribute == "damping":
                 joint.damping[0] = param.value[0]
             else:
@@ -489,6 +534,7 @@ def group_equality_constrained_joints(
 
     ordered_names = list(dict.fromkeys(joint_names))
     selected_names = set(ordered_names)
+    # Union-find combines direct and indirect joint constraints into shared groups.
     parent = {joint_name: joint_name for joint_name in ordered_names}
 
     def find(joint_name: str) -> str:
@@ -591,6 +637,7 @@ def group_quadruped_leg_bodies(body_names: list[str]) -> list[tuple[str, ...]]:
         prefix, suffix = match.groups()
         by_suffix.setdefault(suffix, {})[prefix] = body_name
 
+    # Tie leg parameters only when all four corresponding bodies are present.
     complete_groups = {
         suffix: tuple(by_prefix[prefix] for prefix in _LEG_PREFIXES)
         for suffix, by_prefix in by_suffix.items()
@@ -666,6 +713,7 @@ def build_parameter_dict(
     tie_quadruped_inertias: bool = False,
 ):
     parameter_dict = sysid.ParameterDict()
+    # Equality-coupled joints share one value per dynamic attribute.
     joint_groups = group_equality_constrained_joints(model, joint_names)
     shared_joint_groups = [group for group in joint_groups if len(group) > 1]
     if shared_joint_groups:
@@ -698,6 +746,8 @@ def build_parameter_dict(
                     attribute,
                 ),
             )
+            # Initial guesses are adjusted independently of the nominal model.
+            # main() subsequently moves these values inside the requested bounds.
             if attribute == "frictionloss":
                 parameter.value[:] = current_value*0.1
             elif attribute == "armature":
@@ -724,6 +774,8 @@ def build_parameter_dict(
                 "`model_spec` is required for inertial identification."
             )
 
+        # Scale bounds contain 1; additive offsets contain 0, retaining the nominal
+        # model as a feasible reference for the inertial parameterization.
         mass_scale_bounds = _validate_relative_bounds(
             bounds["link_mass_scale"],
             "link_mass_scale bounds",
@@ -748,6 +800,8 @@ def build_parameter_dict(
         )
 
         if identify_inertia_tensor:
+            # Full inertia also includes mass and CoM, so it takes precedence.
+            # The pseudo-inertia representation maintains physical consistency.
             inertia_type = sysid.InertiaType.Pseudo
             parameter_suffix = "full_inertia"
         elif identify_center_of_mass:
@@ -768,6 +822,8 @@ def build_parameter_dict(
                 print("Shared quadruped inertial groups:", shared_groups)
 
         for body_group in body_groups:
+            # A shared group uses its first body's nominal inertia and applies
+            # each fitted candidate to all corresponding bodies through a modifier.
             body_name = body_group[0]
             if len(body_group) > 1:
                 param_prefix = f"shared_{body_name.split('_', 1)[1]}"
@@ -781,6 +837,7 @@ def build_parameter_dict(
                     modifier = make_body_mass_modifier(sysid, body_name)
             parameter_dict.add(
                 sysid.body_inertia_param(
+                    # Inertia setup may modify the spec; isolate it from other groups.
                     spec=model_spec.copy(),
                     model=model,
                     body_name=body_name,
