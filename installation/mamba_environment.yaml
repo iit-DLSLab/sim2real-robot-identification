@@ -1,4 +1,8 @@
 name: sim2real_robot_identification_env
+# Force ROS 2 to use localhost at startup for safety.
+# This value can still be overridden after activating the environment.
+variables:
+  ROS_LOCALHOST_ONLY: "1"
 channels:
 - conda-forge
 - nvidia
@@ -7,7 +11,6 @@ dependencies:
 - pip
 - python
 - numpy
-- cuda-nvcc 
 - ros-humble-desktop
 - ros-humble-rmw-cyclonedds-cpp
 - ros-humble-rosidl-generator-dds-idl
@@ -24,11 +27,9 @@ dependencies:
 - gymnasium
 - pip:
   - readchar
-  - onnxruntime
   - torch
   - mujoco
   - tabulate
   - plotly
   - mediapy
   - scipy
-  - gym-quadruped>=1.1.5

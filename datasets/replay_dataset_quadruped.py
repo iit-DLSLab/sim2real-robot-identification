@@ -1,6 +1,3 @@
-# Gym and Simulation related imports
-from gym_quadruped.quadruped_env import QuadrupedEnv
-
 import sys
 import os 
 dir_path = os.path.dirname(os.path.realpath(__file__))
