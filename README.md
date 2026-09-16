@@ -76,6 +76,22 @@ python3 sysid_isaaclab/my_fit.py --headless
 python3 sysid_mujoco/my_fit.py 
 ```
 
+To also estimate one control delay per actuator, enable native MuJoCo delay
+buffers (30 samples by default):
+
+```bash
+python3 sysid_mujoco/my_fit.py --identify-delays --delay-num-samples 30 --delay-interp linear
+```
+
+`--delay-interp` accepts `linear` (default), `zoh` (zero-order hold), or `cubic`.
+Prefer `linear` or `cubic` for fitting: `zoh` can produce zero delay gradients.
+Optional `--delay-bounds LOWER UPPER` sets bounds in seconds; by default these
+are `[0, 30 * timestep]`. The upper bound must exceed one timestep and cannot
+exceed the configured buffer capacity (`--delay-num-samples * timestep`).
+Delay parameters appear alongside the dynamics parameters in the fitting report.
+See the [MuJoCo delay documentation](https://mujoco.readthedocs.io/en/latest/modeling.html#delays)
+for history and interpolation semantics.
+
 ## How to contribute
 
 PRs are very welcome (search for **TODO** in the issue, or add what you like)!
