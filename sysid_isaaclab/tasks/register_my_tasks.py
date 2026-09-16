@@ -1,7 +1,7 @@
 import gymnasium as gym
 
 gym.register(
-    id="IsaacLab-Pace-Go2",
+    id="IsaacLab-Pace-go2",
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
@@ -10,16 +10,7 @@ gym.register(
 )
 
 gym.register(
-    id="IsaacLab-Pace-Z1",
-    entry_point="isaaclab.envs:ManagerBasedRLEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": "tasks.z1_pace_env_cfg:Z1PaceEnvCfg",
-    },
-)
-
-gym.register(
-    id="IsaacLab-Pace-Aliengo",
+    id="IsaacLab-Pace-a2",
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
@@ -28,7 +19,25 @@ gym.register(
 )
 
 gym.register(
-    id="IsaacLab-Pace-Piper",
+    id="IsaacLab-Pace-pegasus",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": "tasks.pegasus_pace_env_cfg:PegasusPaceEnvCfg",
+    },
+)
+
+gym.register(
+    id="IsaacLab-Pace-z1",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": "tasks.z1_pace_env_cfg:Z1PaceEnvCfg",
+    },
+)
+
+gym.register(
+    id="IsaacLab-Pace-piper_l",
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={

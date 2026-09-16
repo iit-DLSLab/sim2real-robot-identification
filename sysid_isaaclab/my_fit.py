@@ -10,10 +10,17 @@ import argparse
 
 from isaaclab.app import AppLauncher
 
+import sys
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+import config
+task_name = "IsaacLab-Pace-" + config.robot_name
+
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Pace agent for Isaac Lab environments.")
 parser.add_argument("--num_envs", type=int, default=8192, help="Number of environments to simulate.")
-parser.add_argument("--task", type=str, default="IsaacLab-Pace-Go2", help="Name of the task.")
+parser.add_argument("--task", type=str, default=task_name, help="Name of the task.")
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
 # parse the arguments

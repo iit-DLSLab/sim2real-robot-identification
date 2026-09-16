@@ -72,33 +72,9 @@ python3 sysid_isaaclab/my_fit.py --headless
 
 ## Run a calibration in Mujoco
 
-Fitting includes measured joint position and velocity. Position residuals have
-weight 1.0 and velocity residuals have weight 0.1 by default, configurable with
-`--velocity-weight` (use 0 to disable the velocity contribution), applied before the optimizer
-squares them (velocity therefore contributes a factor of 0.01 to squared cost).
-Both use MuJoCo sysid's per-signal normalization; zero-valued signals use a unit
-scale to keep stationary-joint residuals finite.
-
 ```bash
 python3 sysid_mujoco/my_fit.py 
 ```
-
-To also estimate one control delay shared by all actuators, enable native MuJoCo delay
-buffers (30 samples by default):
-
-```bash
-python3 sysid_mujoco/my_fit.py --identify-delays --delay-num-samples 30 --delay-interp linear
-```
-
-`--delay-interp` accepts `linear` (default), `zoh` (zero-order hold), or `cubic`.
-Prefer `linear` or `cubic` for fitting: `zoh` can produce zero delay gradients.
-Optional `--delay-bounds LOWER UPPER` sets bounds in seconds; by default these
-are `[0, 0.01]` (0–10 ms). The upper bound must exceed one timestep and cannot
-exceed the configured buffer capacity (`--delay-num-samples * timestep`).
-The `shared_actuator_delay` parameter appears alongside the dynamics parameters
-in the fitting report and applies the same delay to every actuator.
-See the [MuJoCo delay documentation](https://mujoco.readthedocs.io/en/latest/modeling.html#delays)
-for history and interpolation semantics.
 
 ## How to contribute
 
