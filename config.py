@@ -1,6 +1,6 @@
 import numpy as np
 
-robot = 'piper_l'  # 'aliengo', 'go1', 'go2', 'b2', 'hyqreal2', 'z1', 'piper_l', 'a2'
+robot = 'go2'  # 'aliengo', 'go1', 'go2', 'b2', 'hyqreal2', 'z1', 'piper_l', 'a2', "pegasus"
 
 # ----------------------------------------------------------------------------------------------------------------
 if(robot == "aliengo"):
@@ -61,6 +61,18 @@ elif(robot == "hyqreal2"):
                    20., 20., 20.,
                    20., 20., 20.,
                    20., 20., 20.])
+
+elif(robot == "pegasus"):
+    # Order FL, FR, RL, RR
+    Kp = np.array([200., 200., 200.,
+                   200., 200., 200.,
+                   200., 200., 200.,
+                   200., 200., 200.])
+
+    Kd = np.array([10., 10., 10.,
+                   10., 10., 10.,
+                   10., 10., 10.,
+                   10., 10., 10.])
 
 elif(robot =="z1"):
     # Order joint1-joint2-joint3-joint4-joint5-joint6-gripper

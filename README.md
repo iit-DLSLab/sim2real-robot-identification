@@ -69,7 +69,7 @@ python3 datasets/plot_joint_trajectories.py
 
 ## Run a calibration in IsaacLab
 
-Add a new [task](./sysid_isaaclab/tasks) for a new robot, or use the one in this repo. Then
+Add a new [task](./sysid_isaaclab/tasks) for a new robot. Then
 
 ```bash
 python3 sysid_isaaclab/my_fit.py --headless
