@@ -24,6 +24,7 @@ The models (usd and xml) identified so far can be found in the folder **robot_mo
 | [aliengo](./robot_model/aliengo) | 2026-05-13 | 2026-05-13 | ✓ |
 | [go2](./robot_model/go2) | 2026-08-04 | 2026-05-13 | ✓ |
 | [hyqreal2](./robot_model/hyqreal2) | 2026-04-09 | 2026-03-24 | X |
+| [pegasus](./robot_model/pegasus) | 2026-09-17 | — |  |
 | [piper_l](./robot_model/piper_l) | 2026-09-02 | — | ✓ |
 | [z1](./robot_model/z1) | 2026-04-21 | — | ✓ |
 <!-- model-dates:end -->
