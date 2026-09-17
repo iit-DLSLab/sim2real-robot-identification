@@ -58,7 +58,19 @@ python3 run_collection_quadruped_ros2.py
 python3 run_collection_manipulator_ros2.py
 ```
 
-4. Visualize your trajectory running
+
+4. Inside the script
+```bash
+startCollection
+trajectory
+```
+
+5. Close the script
+```bash
+ctrl+c
+```
+
+6. Visualize your runned trajectory
 ```bash
 python3 datasets/replay_dataset_quadruped.py
 python3 datasets/replay_dataset_manipulator.py
