@@ -296,10 +296,16 @@ class Data_Collection_Node(Node):
             desired_joint_pos[0, 1] = self.calibration_reference_thigh_trajectory[trajectory_index]
             desired_joint_pos[0, 2] = self.calibration_reference_calf_trajectory[trajectory_index]
             desired_joint_pos[1] = copy.deepcopy(desired_joint_pos[0])
-            desired_joint_pos[1, 0] = -desired_joint_pos[1, 0]
-            desired_joint_pos[2] = copy.deepcopy(desired_joint_pos[0])
-            desired_joint_pos[3] = copy.deepcopy(desired_joint_pos[0])
-            desired_joint_pos[3, 0] = -desired_joint_pos[3, 0]  
+            if(config.robot == "pegasus"):
+                desired_joint_pos[1, 0] = desired_joint_pos[1, 0]
+                desired_joint_pos[2] = copy.deepcopy(desired_joint_pos[0])
+                desired_joint_pos[3] = copy.deepcopy(desired_joint_pos[0])
+                desired_joint_pos[3, 0] = desired_joint_pos[3, 0]  
+            else:
+                desired_joint_pos[1, 0] = -desired_joint_pos[1, 0]
+                desired_joint_pos[2] = copy.deepcopy(desired_joint_pos[0])
+                desired_joint_pos[3] = copy.deepcopy(desired_joint_pos[0])
+                desired_joint_pos[3, 0] = -desired_joint_pos[3, 0]  
         return desired_joint_pos, Kp, Kd
 
     def _collect_trajectory_data(self, joints_pos, joints_vel, desired_joint_pos):
