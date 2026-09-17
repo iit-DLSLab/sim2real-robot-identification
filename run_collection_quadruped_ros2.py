@@ -60,8 +60,8 @@ os.system("renice -n -21 -p " + str(pid))
 os.system("echo -20 > /proc/" + str(pid) + "/autogroup")
 #for real time, launch it with chrt -r 99 python3 run_controller.py
 
-USE_MUJOCO_RENDER = True
-USE_MUJOCO_SIMULATION = True
+USE_MUJOCO_RENDER = config.USE_MUJOCO_RENDER
+USE_MUJOCO_SIMULATION = config.USE_MUJOCO_SIMULATION
 
 
 CONTROL_FREQ = config.frequency_collection # Hz 

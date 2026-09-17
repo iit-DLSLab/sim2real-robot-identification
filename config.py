@@ -2,6 +2,9 @@ import numpy as np
 
 robot = 'go2'  # 'aliengo', 'go1', 'go2', 'b2', 'hyqreal2', 'z1', 'piper_l', 'a2', "pegasus"
 
+
+USE_MUJOCO_SIMULATION = False
+USE_MUJOCO_RENDER = True
 # ----------------------------------------------------------------------------------------------------------------
 if(robot == "aliengo"):
     Kp = np.array([25., 25., 25.,
