@@ -28,7 +28,7 @@ dependencies:
 - pip:
   - readchar
   - torch
-  - mujoco
+  - mujoco==3.10.0
   - tabulate
   - plotly
   - mediapy
