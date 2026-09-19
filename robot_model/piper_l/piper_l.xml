@@ -11,6 +11,8 @@
   </default>
   
   <asset>
+    <material name="gray" rgba="0.671705 0.692426 0.774270 1"/>
+
     <mesh name="base_link" file="assets/base_link.STL" />
     <mesh name="link1" file="assets/link1.STL" />
     <mesh name="link2" file="assets/link2.STL" />
@@ -24,56 +26,56 @@
   
   <worldbody>
     <body name="link0" quat="0.999994 0.000457118 0.00346448 0">
-      <geom class="visual" rgba="1 1 1 1" mesh="base_link" />
+      <geom class="visual" material="gray" mesh="base_link" />
       
       <body name="link1" pos="0 0 0.123">
         <inertial pos="-0.000108818 0.000607029 -0.00538686" quat="0.701411 0.712748 -0.000102414 -0.00362695" mass="0.71" diaginertia="0.000458361 0.000409985 0.000334505" />
         <joint name="joint1" pos="0 0 0" axis="0 0 1" limited="false" armature="0.2380" damping="0.5000" frictionloss="0.5000" />
-        <geom class="visual" rgba="1 1 1 1" mesh="link1" />
+        <geom class="visual" material="gray" mesh="link1" />
         
         <body name="link2" quat="0.047971 -0.0479709 -0.705478 -0.705478">
           <inertial pos="0.258453 -0.00907882 0.00209824" quat="0.33951 0.630002 0.324014 0.618745" mass="1.16404" diaginertia="0.0162743 0.0162573 0.000956571" />
           <joint name="joint2" pos="0 0 0" axis="0 0 1" limited="false" armature="0.2069" damping="0.5000" frictionloss="0.5000" />
-          <geom class="visual" rgba="1 1 1 1" mesh="link2" />
+          <geom class="visual" material="gray" mesh="link2" />
           <geom class="collision" size="0.04 0.02" quat="0.707107 0 0 0.707107" type="capsule" />
           <geom class="collision" size="0.03 0.1" pos="0.15 -0.025 0" quat="0.703163 0 0.703163 -0.105474" type="capsule" />
         
           <body name="link3" pos="0.33823 0 0" quat="0.624016 0 0 -0.781412">
             <inertial pos="-0.00810222 -0.192422 -0.000651809" quat="0.709181 0.703284 -0.0204559 0.0451178" mass="0.583343" diaginertia="0.00556992 0.00550867 0.000258804" />
             <joint name="joint3" pos="0 0 0" axis="0 0 1" limited="false" armature="0.3453" damping="0.5000" frictionloss="0.5000" />
-            <geom class="visual" rgba="1 1 1 1" mesh="link3" />
+            <geom class="visual" material="gray" mesh="link3" />
             <geom class="collision" size="0.04 0.02" quat="0.707107 0 0 0.707107" type="capsule" />
             <geom class="collision" size="0.025 0.08" pos="-0.01 -0.17 0" quat="0.706665 0.706665 0 0.0353333" type="capsule" />
         
             <body name="link4" pos="0 -0.32075 0" quat="0.705117 0.70512 0.0529832 0.0529834">
               <inertial pos="0.00312889 -0.00168781 -0.00425666" quat="0.859761 0.0861299 -0.104595 0.492395" mass="0.366062" diaginertia="0.000174503 0.000169733 0.000142021" />
               <joint name="joint4" pos="0 0 0" axis="0 0 1" limited="false" armature="0.0010" damping="0.2497" frictionloss="0.1074" />
-              <geom class="visual" rgba="1 1 1 1" mesh="link4" />
+              <geom class="visual" material="gray" mesh="link4" />
               <geom class="collision" size="0.03 0.015" quat="0.707107 0.707107 0 0" type="capsule" />
         
               <body name="link5" quat="0.706222 -0.706225 -0.0353407 -0.0353405">
                 <inertial pos="0.00417769 -0.0639706 -0.00267944" quat="0.609413 0.425035 -0.377108 0.552947" mass="0.376242" diaginertia="0.000302186 0.000295139 0.000150851" />
                 <joint name="joint5" pos="0 0 0" axis="0 0 1" limited="false" armature="0.0232" damping="0.1736" frictionloss="0.1433" />
-                <geom class="visual" rgba="1 1 1 1" mesh="link5" />
+                <geom class="visual" material="gray" mesh="link5" />
                 <geom class="collision" size="0.03 0.025" pos="0 -0.08 0" quat="0.707107 0.707107 0 0" type="capsule" />
         
                 <body name="link6" pos="0 -0.091 0" quat="0.707105 0.707108 0 0">
                   <inertial pos="0.0111527268 0.00269159034 0.0371316254" quat="0.491523877 0.525880573 -0.516820751 -0.463411494" mass="0.537494" diaginertia="0.000323982045 0.000453515785 0.000630547405" />
                   <joint name="joint6" pos="0 0 0" axis="0 0 1" limited="false" armature="0.0010" damping="0.2864" frictionloss="0.0404" />
-                  <geom class="visual" pos="0.008 -0.002 0.064" quat="0.500398 -0.5 -0.499602 0.5" rgba="1 1 1 1" mesh="gripper_base_100_v3" />
+                  <geom class="visual" pos="0.008 -0.002 0.064" quat="0.500398 -0.5 -0.499602 0.5" material="gray" mesh="gripper_base_100_v3" />
                   <geom class="collision" size="0.082 0.01 0.01" pos="0 0 0.06" quat="0.500398 -0.5 -0.499602 0.5" type="box" />
         
                   <body name="link7" pos="0 0 0.13503" quat="0.707105 0.707108 0 0">
                     <inertial pos="0.000277817 -0.0467674 -0.0092103" quat="0.553273 0.439968 -0.46134 0.536174" mass="0.0264822" diaginertia="1.45133e-05 1.0004e-05 5.87021e-06" />
                     <joint name="joint7" pos="0 0 0" axis="0 0 -1" type="slide" range="0 0.05" armature="0.0010" damping="0.0010" frictionloss="0.0010" />
-                    <geom class="visual" rgba="0.7 0.7 0.7 1" mesh="link7" />
+                    <geom class="visual" material="gray" mesh="link7" />
                     <geom class="collision" size="0.01 0.03 0.002" pos="0 -0.025 -0.003" type="box" />
                   </body>
         
                   <body name="link8" pos="0 0 0.13503" quat="0.707105 -0.707108 0 0">
                     <inertial pos="0.000277817 0.0467674 -0.0092103" quat="0.553273 0.439968 -0.46134 0.536174" mass="0.0264822" diaginertia="1.45133e-05 1.0004e-05 5.87021e-06" />
                     <joint name="joint8" pos="0 0 0" axis="0 0 1" type="slide" range="-0.05 0" armature="0.0010" damping="0.0010" frictionloss="0.0010" />
-                    <geom class="visual" rgba="0.792157 0.819608 0.933333 1" mesh="link8" />
+                    <geom class="visual" material="gray" mesh="link8" />
                     <geom class="collision" size="0.01 0.03 0.002" pos="0 0.025 -0.003" type="box" />
                   </body>
                 
