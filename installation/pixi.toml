@@ -21,7 +21,7 @@ gymnasium = "*"
 [feature.common.pypi-dependencies]
 readchar = "*"
 torch = "*"
-mujoco = "3.10.0"
+mujoco = "==3.13.0"
 scipy = "*"
 
 [feature.common.activation.env]
