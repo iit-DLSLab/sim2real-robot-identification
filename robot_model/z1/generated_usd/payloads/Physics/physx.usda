@@ -1,0 +1,111 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "MuJoCo USD Converter v0.2.0"
+    }
+    defaultPrim = "z1"
+    doc = """Generated from Composed Stage of root layer /tmp/tmpamtg4756/z1.usdc
+
+
+Generated from Composed Stage of root layer /tmp/mjcf_import_z1_q5oz4l1n/usdex_z1/z1.usdc
+
+
+Generated from Composed Stage of root layer /tmp/mjcf_import_z1_q5oz4l1n/temp_z1/z1.usd
+
+
+Generated from Composed Stage of root layer /home/gturrisi-iit.local/other_ws_home/sim2real-robot-identification/robot_model/z1/z1/payloads/base.usd
+"""
+    kilogramsPerUnit = 1
+    metersPerUnit = 1
+    subLayers = [
+        @./physics.usda@
+    ]
+    upAxis = "Z"
+)
+
+over "z1"
+{
+    over "Geometry"
+    {
+        over "link00"
+        {
+            over "link01"
+            {
+                over "link02"
+                {
+                    over "link03"
+                    {
+                        over "link04"
+                        {
+                            over "link05"
+                            {
+                                over "link06"
+                                {
+                                    over "gripperMover"
+                                    {
+                                        over "jointGripper" (
+                                            prepend apiSchemas = ["PhysxJointAPI"]
+                                        )
+                                        {
+                                            float physxJoint:armature = 0.0445
+                                            float physxJoint:jointFriction = 5.9808
+                                        }
+                                    }
+
+                                    over "joint6" (
+                                        prepend apiSchemas = ["PhysxJointAPI"]
+                                    )
+                                    {
+                                        float physxJoint:armature = 0.1382
+                                        float physxJoint:jointFriction = 2.1069
+                                    }
+                                }
+
+                                over "joint5" (
+                                    prepend apiSchemas = ["PhysxJointAPI"]
+                                )
+                                {
+                                    float physxJoint:armature = 0.0865
+                                    float physxJoint:jointFriction = 2.6727
+                                }
+                            }
+
+                            over "joint4" (
+                                prepend apiSchemas = ["PhysxJointAPI"]
+                            )
+                            {
+                                float physxJoint:armature = 0.0099
+                                float physxJoint:jointFriction = 2.7345
+                            }
+                        }
+
+                        over "joint3" (
+                            prepend apiSchemas = ["PhysxJointAPI"]
+                        )
+                        {
+                            float physxJoint:armature = 0.1984
+                            float physxJoint:jointFriction = 2.699
+                        }
+                    }
+
+                    over "joint2" (
+                        prepend apiSchemas = ["PhysxJointAPI"]
+                    )
+                    {
+                        float physxJoint:armature = 0.0569
+                        float physxJoint:jointFriction = 4.4866
+                    }
+                }
+
+                over "joint1" (
+                    prepend apiSchemas = ["PhysxJointAPI"]
+                )
+                {
+                    float physxJoint:armature = 0.1513
+                    float physxJoint:jointFriction = 2.1582
+                }
+            }
+        }
+    }
+}
+

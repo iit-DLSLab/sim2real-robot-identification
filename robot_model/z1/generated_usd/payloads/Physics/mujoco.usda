@@ -1,0 +1,369 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "MuJoCo USD Converter v0.2.0"
+    }
+    defaultPrim = "z1"
+    doc = """Generated from Composed Stage of root layer /tmp/tmpamtg4756/z1.usdc
+
+
+Generated from Composed Stage of root layer /tmp/mjcf_import_z1_q5oz4l1n/usdex_z1/z1.usdc
+
+
+Generated from Composed Stage of root layer /tmp/mjcf_import_z1_q5oz4l1n/temp_z1/z1.usd
+
+
+Generated from Composed Stage of root layer /home/gturrisi-iit.local/other_ws_home/sim2real-robot-identification/robot_model/z1/z1/payloads/base.usd
+"""
+    kilogramsPerUnit = 1
+    metersPerUnit = 1
+    subLayers = [
+        @./physics.usda@
+    ]
+    upAxis = "Z"
+)
+
+over "z1"
+{
+    over "Geometry"
+    {
+        over "link00"
+        {
+            over "Cylinder" (
+                prepend apiSchemas = ["MjcCollisionAPI"]
+            )
+            {
+                uniform int mjc:group = 3
+            }
+
+            over "link01"
+            {
+                over "link02"
+                {
+                    over "Cylinder" (
+                        prepend apiSchemas = ["MjcCollisionAPI"]
+                    )
+                    {
+                        uniform int mjc:group = 3
+                    }
+
+                    over "Cylinder_1" (
+                        prepend apiSchemas = ["MjcCollisionAPI"]
+                    )
+                    {
+                        uniform int mjc:group = 3
+                    }
+
+                    over "Cylinder_2" (
+                        prepend apiSchemas = ["MjcCollisionAPI"]
+                    )
+                    {
+                        uniform int mjc:group = 3
+                    }
+
+                    over "link03"
+                    {
+                        over "Cylinder" (
+                            prepend apiSchemas = ["MjcCollisionAPI"]
+                        )
+                        {
+                            uniform int mjc:group = 3
+                        }
+
+                        over "Cylinder_1" (
+                            prepend apiSchemas = ["MjcCollisionAPI"]
+                        )
+                        {
+                            uniform int mjc:group = 3
+                        }
+
+                        over "link04"
+                        {
+                            over "Cylinder" (
+                                prepend apiSchemas = ["MjcCollisionAPI"]
+                            )
+                            {
+                                uniform int mjc:group = 3
+                            }
+
+                            over "link05"
+                            {
+                                over "link06"
+                                {
+                                    over "Cylinder" (
+                                        prepend apiSchemas = ["MjcCollisionAPI"]
+                                    )
+                                    {
+                                        uniform int mjc:group = 3
+                                    }
+
+                                    over "Box" (
+                                        prepend apiSchemas = ["MjcCollisionAPI"]
+                                    )
+                                    {
+                                        uniform int mjc:group = 3
+                                    }
+
+                                    over "Box_1" (
+                                        prepend apiSchemas = ["MjcCollisionAPI"]
+                                    )
+                                    {
+                                        uniform int mjc:group = 3
+                                    }
+
+                                    over "attachment_site" (
+                                        prepend apiSchemas = ["MjcSiteAPI"]
+                                    )
+                                    {
+                                        uniform int mjc:group = 1
+                                    }
+
+                                    over "gripperMover"
+                                    {
+                                        over "Box" (
+                                            prepend apiSchemas = ["MjcCollisionAPI"]
+                                        )
+                                        {
+                                            uniform int mjc:group = 3
+                                        }
+
+                                        over "Box_1" (
+                                            prepend apiSchemas = ["MjcCollisionAPI"]
+                                        )
+                                        {
+                                            uniform int mjc:group = 3
+                                        }
+
+                                        over "jointGripper" (
+                                            delete apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+                                            prepend apiSchemas = ["MjcJointAPI"]
+                                        )
+                                        {
+                                            uniform double mjc:armature = 0.0445
+                                            uniform double mjc:damping = 2.3799
+                                            uniform double mjc:frictionloss = 5.9808
+                                        }
+
+                                        over "z1_GripperMover"
+                                        {
+                                        }
+
+                                        over "z1_GripperMover_col_1"
+                                        {
+                                        }
+
+                                        over "z1_GripperMover_col_2"
+                                        {
+                                        }
+
+                                        over "z1_GripperMover_col_3"
+                                        {
+                                        }
+
+                                        over "z1_GripperMover_col_4"
+                                        {
+                                        }
+
+                                        over "z1_GripperMover_col_5"
+                                        {
+                                        }
+                                    }
+
+                                    over "joint6" (
+                                        delete apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+                                        prepend apiSchemas = ["MjcJointAPI"]
+                                    )
+                                    {
+                                        uniform double mjc:armature = 0.1382
+                                        uniform double mjc:damping = 4.2921
+                                        uniform double mjc:frictionloss = 2.1069
+                                    }
+
+                                    over "z1_Link06"
+                                    {
+                                    }
+
+                                    over "z1_GripperStator"
+                                    {
+                                    }
+
+                                    over "z1_GripperStator_col_1"
+                                    {
+                                    }
+
+                                    over "z1_GripperStator_col_2"
+                                    {
+                                    }
+
+                                    over "z1_GripperStator_col_3"
+                                    {
+                                    }
+
+                                    over "z1_GripperStator_col_4"
+                                    {
+                                    }
+
+                                    over "z1_GripperStator_col_5"
+                                    {
+                                    }
+
+                                    over "z1_GripperStator_col_6"
+                                    {
+                                    }
+                                }
+
+                                over "joint5" (
+                                    delete apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+                                    prepend apiSchemas = ["MjcJointAPI"]
+                                )
+                                {
+                                    uniform double mjc:armature = 0.0865
+                                    uniform double mjc:damping = 4.4578
+                                    uniform double mjc:frictionloss = 2.6727
+                                }
+
+                                over "z1_Link05"
+                                {
+                                }
+                            }
+
+                            over "joint4" (
+                                delete apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+                                prepend apiSchemas = ["MjcJointAPI"]
+                            )
+                            {
+                                uniform double mjc:armature = 0.0099
+                                uniform double mjc:damping = 5.0049
+                                uniform double mjc:frictionloss = 2.7345
+                            }
+
+                            over "z1_Link04"
+                            {
+                            }
+                        }
+
+                        over "joint3" (
+                            delete apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+                            prepend apiSchemas = ["MjcJointAPI"]
+                        )
+                        {
+                            uniform double mjc:armature = 0.1984
+                            uniform double mjc:damping = 3.493
+                            uniform double mjc:frictionloss = 2.699
+                        }
+
+                        over "z1_Link03"
+                        {
+                        }
+                    }
+
+                    over "joint2" (
+                        delete apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+                        prepend apiSchemas = ["MjcJointAPI"]
+                    )
+                    {
+                        uniform double mjc:armature = 0.0569
+                        uniform double mjc:damping = 7
+                        uniform double mjc:frictionloss = 4.4866
+                    }
+
+                    over "z1_Link02"
+                    {
+                    }
+                }
+
+                over "joint1" (
+                    delete apiSchemas = ["PhysicsDriveAPI:angular", "PhysicsJointStateAPI:angular"]
+                    prepend apiSchemas = ["MjcJointAPI"]
+                )
+                {
+                    uniform double mjc:armature = 0.1513
+                    uniform double mjc:damping = 4.6844
+                    uniform double mjc:frictionloss = 2.1582
+                }
+
+                over "z1_Link01"
+                {
+                }
+            }
+
+            over "z1_Link00"
+            {
+            }
+        }
+    }
+
+    over "Physics"
+    {
+        over "PhysicsMaterial" (
+            prepend apiSchemas = ["MjcMaterialAPI"]
+        )
+        {
+        }
+
+        def MjcActuator "motor1"
+        {
+            uniform double mjc:ctrlRange:max = 30
+            uniform double mjc:ctrlRange:min = -30
+            custom rel mjc:target
+            prepend rel mjc:target = </z1/Geometry/link00/link01/joint1>
+        }
+
+        def MjcActuator "motor2"
+        {
+            uniform double mjc:ctrlRange:max = 60
+            uniform double mjc:ctrlRange:min = -60
+            custom rel mjc:target
+            prepend rel mjc:target = </z1/Geometry/link00/link01/link02/joint2>
+        }
+
+        def MjcActuator "motor3"
+        {
+            uniform double mjc:ctrlRange:max = 30
+            uniform double mjc:ctrlRange:min = -30
+            custom rel mjc:target
+            prepend rel mjc:target = </z1/Geometry/link00/link01/link02/link03/joint3>
+        }
+
+        def MjcActuator "motor4"
+        {
+            uniform double mjc:ctrlRange:max = 30
+            uniform double mjc:ctrlRange:min = -30
+            custom rel mjc:target
+            prepend rel mjc:target = </z1/Geometry/link00/link01/link02/link03/link04/joint4>
+        }
+
+        def MjcActuator "motor5"
+        {
+            uniform double mjc:ctrlRange:max = 30
+            uniform double mjc:ctrlRange:min = -30
+            custom rel mjc:target
+            prepend rel mjc:target = </z1/Geometry/link00/link01/link02/link03/link04/link05/joint5>
+        }
+
+        def MjcActuator "motor6"
+        {
+            uniform double mjc:ctrlRange:max = 30
+            uniform double mjc:ctrlRange:min = -30
+            custom rel mjc:target
+            prepend rel mjc:target = </z1/Geometry/link00/link01/link02/link03/link04/link05/link06/joint6>
+        }
+
+        def MjcActuator "motorGripper"
+        {
+            uniform double mjc:ctrlRange:max = 10
+            uniform double mjc:ctrlRange:min = -10
+            custom rel mjc:target
+            prepend rel mjc:target = </z1/Geometry/link00/link01/link02/link03/link04/link05/link06/gripperMover/jointGripper>
+        }
+    }
+
+    over "Materials"
+    {
+    }
+
+    over "VisualMaterials"
+    {
+    }
+}
+
