@@ -11,11 +11,12 @@ import argparse
 from isaaclab.app import AppLauncher
 
 import sys
+from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 import config
-task_name = "IsaacLab-Pace-" + config.robot_name
+task_name = "IsaacLab-Pace-" + config.robot
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Pace agent for Isaac Lab environments.")
