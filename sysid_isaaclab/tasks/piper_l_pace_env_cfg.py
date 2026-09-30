@@ -83,7 +83,7 @@ PIPER_GRIPPER_ACTUATOR_CFG = PaceDCMotorCfg(
 
 PIPER_L_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
-        usd_path=f"{ISAAC_ASSET_DIR}/../../robot_model/piper_l/piper_l.usd",
+        usd_path=f"{ISAAC_ASSET_DIR}/../../robot_model/piper_l/generated_usd/piper_l.usda",
         activate_contact_sensors=True,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,

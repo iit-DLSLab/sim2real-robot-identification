@@ -67,7 +67,7 @@ A2_CALF_ACTUATOR_CFG = PaceDCMotorCfg(
 
 A2_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
-        usd_path=f"{ISAAC_ASSET_DIR}/../../robot_model/a2/a2.usd",
+        usd_path=f"{ISAAC_ASSET_DIR}/../../robot_model/a2/generated_usd/a2.usda",
         activate_contact_sensors=True,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,

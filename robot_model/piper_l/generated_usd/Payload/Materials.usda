@@ -1,0 +1,116 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "MuJoCo USD Converter v0.2.0"
+    }
+    defaultPrim = "piper_l_description"
+    kilogramsPerUnit = 1
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "piper_l_description"
+{
+    def Scope "Materials"
+    {
+        def Material "gray" (
+            prepend references = @./MaterialsLibrary.usdc@</Materials/gray>
+        )
+        {
+        }
+    }
+
+    over "Geometry"
+    {
+        over "link0"
+        {
+            over "base_link" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                rel material:binding = </piper_l_description/Materials/gray>
+            }
+
+            over "link1"
+            {
+                over "link1" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding = </piper_l_description/Materials/gray>
+                }
+
+                over "link2"
+                {
+                    over "link2" (
+                        prepend apiSchemas = ["MaterialBindingAPI"]
+                    )
+                    {
+                        rel material:binding = </piper_l_description/Materials/gray>
+                    }
+
+                    over "link3"
+                    {
+                        over "link3" (
+                            prepend apiSchemas = ["MaterialBindingAPI"]
+                        )
+                        {
+                            rel material:binding = </piper_l_description/Materials/gray>
+                        }
+
+                        over "link4"
+                        {
+                            over "link4" (
+                                prepend apiSchemas = ["MaterialBindingAPI"]
+                            )
+                            {
+                                rel material:binding = </piper_l_description/Materials/gray>
+                            }
+
+                            over "link5"
+                            {
+                                over "link5" (
+                                    prepend apiSchemas = ["MaterialBindingAPI"]
+                                )
+                                {
+                                    rel material:binding = </piper_l_description/Materials/gray>
+                                }
+
+                                over "link6"
+                                {
+                                    over "gripper_base_100_v3" (
+                                        prepend apiSchemas = ["MaterialBindingAPI"]
+                                    )
+                                    {
+                                        rel material:binding = </piper_l_description/Materials/gray>
+                                    }
+
+                                    over "link7"
+                                    {
+                                        over "link7" (
+                                            prepend apiSchemas = ["MaterialBindingAPI"]
+                                        )
+                                        {
+                                            rel material:binding = </piper_l_description/Materials/gray>
+                                        }
+                                    }
+
+                                    over "link8"
+                                    {
+                                        over "link8" (
+                                            prepend apiSchemas = ["MaterialBindingAPI"]
+                                        )
+                                        {
+                                            rel material:binding = </piper_l_description/Materials/gray>
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+

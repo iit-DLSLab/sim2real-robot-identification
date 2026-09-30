@@ -1,0 +1,113 @@
+#usda 1.0
+(
+    customLayerData = {
+        string creator = "MuJoCo USD Converter v0.2.0"
+    }
+    defaultPrim = "z1"
+    kilogramsPerUnit = 1
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "z1"
+{
+    def Scope "Materials"
+    {
+        def Material "gray" (
+            prepend references = @./MaterialsLibrary.usdc@</Materials/gray>
+        )
+        {
+        }
+    }
+
+    over "Geometry"
+    {
+        over "link00"
+        {
+            over "z1_Link00" (
+                prepend apiSchemas = ["MaterialBindingAPI"]
+            )
+            {
+                rel material:binding = </z1/Materials/gray>
+            }
+
+            over "link01"
+            {
+                over "z1_Link01" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding = </z1/Materials/gray>
+                }
+
+                over "link02"
+                {
+                    over "z1_Link02" (
+                        prepend apiSchemas = ["MaterialBindingAPI"]
+                    )
+                    {
+                        rel material:binding = </z1/Materials/gray>
+                    }
+
+                    over "link03"
+                    {
+                        over "z1_Link03" (
+                            prepend apiSchemas = ["MaterialBindingAPI"]
+                        )
+                        {
+                            rel material:binding = </z1/Materials/gray>
+                        }
+
+                        over "link04"
+                        {
+                            over "z1_Link04" (
+                                prepend apiSchemas = ["MaterialBindingAPI"]
+                            )
+                            {
+                                rel material:binding = </z1/Materials/gray>
+                            }
+
+                            over "link05"
+                            {
+                                over "z1_Link05" (
+                                    prepend apiSchemas = ["MaterialBindingAPI"]
+                                )
+                                {
+                                    rel material:binding = </z1/Materials/gray>
+                                }
+
+                                over "link06"
+                                {
+                                    over "z1_Link06" (
+                                        prepend apiSchemas = ["MaterialBindingAPI"]
+                                    )
+                                    {
+                                        rel material:binding = </z1/Materials/gray>
+                                    }
+
+                                    over "z1_GripperStator" (
+                                        prepend apiSchemas = ["MaterialBindingAPI"]
+                                    )
+                                    {
+                                        rel material:binding = </z1/Materials/gray>
+                                    }
+
+                                    over "gripperMover"
+                                    {
+                                        over "z1_GripperMover" (
+                                            prepend apiSchemas = ["MaterialBindingAPI"]
+                                        )
+                                        {
+                                            rel material:binding = </z1/Materials/gray>
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
