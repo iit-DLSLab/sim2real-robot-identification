@@ -24,8 +24,11 @@ parser.add_argument("--num_envs", type=int, default=8192, help="Number of enviro
 parser.add_argument("--task", type=str, default=task_name, help="Name of the task.")
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
-# parse the arguments
-args_cli = parser.parse_args()
+# parse the arguments; leftover Hydra-style tokens (e.g. `physics=physx`) select presets
+args_cli, unknown_args = parser.parse_known_args()
+preset_overrides = [arg for arg in unknown_args if not arg.startswith("-")]
+if len(preset_overrides) != len(unknown_args):
+    parser.error(f"unrecognized arguments: {' '.join(arg for arg in unknown_args if arg.startswith('-'))}")
 
 # launch omniverse app
 app_launcher = AppLauncher(args_cli)
@@ -71,11 +74,54 @@ def load_torch_data_compat(data_file):
         raise
 
 
+class BackendAgnosticCMAESOptimizer(CMAESOptimizer):
+    """CMA-ES optimizer that writes joint params through APIs shared by PhysX and Newton."""
+
+    def update_simulator(self, articulation, joint_ids, initial_position):
+        env_ids = torch.arange(len(self.sim_params[:, self.armature_idx]), device=joint_ids.device)
+        armature = self.sim_params[:, self.armature_idx]
+        viscous_friction = self.sim_params[:, self.damping_idx]
+        friction = self.sim_params[:, self.friction_idx]
+        articulation.write_joint_armature_to_sim_index(armature=armature, joint_ids=joint_ids, env_ids=env_ids)
+        # Newton exposes a single dry-friction value, while PhysX backends also
+        # provide a separate dynamic-friction coefficient (kept equal to the static one).
+        if hasattr(articulation, "write_joint_dynamic_friction_coefficient_to_sim_index"):
+            # static, dynamic and viscous are written to PhysX in a single call, so no ordering issue
+            articulation.write_joint_friction_coefficient_to_sim_index(
+                joint_friction_coeff=friction,
+                joint_dynamic_friction_coeff=friction,
+                joint_viscous_friction_coeff=viscous_friction,
+                joint_ids=joint_ids,
+                env_ids=env_ids,
+            )
+        else:
+            articulation.write_joint_friction_coefficient_to_sim_index(
+                joint_friction_coeff=friction,
+                joint_viscous_friction_coeff=viscous_friction,
+                joint_ids=joint_ids,
+                env_ids=env_ids,
+            )
+        articulation.write_joint_position_to_sim_index(
+            position=initial_position + self.sim_params[:, self.bias_idx], joint_ids=joint_ids
+        )
+        articulation.write_joint_velocity_to_sim_index(velocity=torch.zeros_like(initial_position), joint_ids=joint_ids)
+        for drive_type in articulation.actuators.keys():
+            drive_indices = articulation.actuators[drive_type].joint_indices
+            if isinstance(drive_indices, slice):
+                all_idx = torch.arange(joint_ids.shape[0], device=joint_ids.device)
+                drive_indices = all_idx[drive_indices]
+            comparison_matrix = (joint_ids.unsqueeze(1) == drive_indices.unsqueeze(0))
+            drive_joint_idx = torch.argmax(comparison_matrix.int(), dim=0)
+            articulation.actuators[drive_type].update_encoder_bias(self.sim_params[:, self.bias_idx][:, drive_joint_idx])
+            articulation.actuators[drive_type].update_time_lags(self.sim_params[:, self.delay_idx].to(torch.int))
+            articulation.actuators[drive_type].reset(env_ids)
+
+
 def main():
     """Zero actions agent with Isaac Lab environment."""
     # parse configuration
     env_cfg = parse_env_cfg(
-        args_cli.task, device=args_cli.device, num_envs=args_cli.num_envs
+        args_cli.task, device=args_cli.device, num_envs=args_cli.num_envs, overrides=preset_overrides
     )
     # create environment
     env = gym.make(args_cli.task, cfg=env_cfg)
@@ -104,7 +150,7 @@ def main():
     time_steps = time_data.shape[0]
     sim_dt = env.unwrapped.sim.cfg.dt
 
-    opt = CMAESOptimizer(
+    opt = BackendAgnosticCMAESOptimizer(
         bounds=bounds_params,
         population_size=env.unwrapped.num_envs,
         log_dir=log_dir,

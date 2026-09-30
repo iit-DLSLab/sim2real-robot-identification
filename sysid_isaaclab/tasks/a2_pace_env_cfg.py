@@ -8,8 +8,9 @@ import isaaclab.sim as sim_utils
 from isaaclab.assets.articulation import ArticulationCfg
 
 from isaaclab.assets import ArticulationCfg
-from pace_sim2real.utils import PaceDCMotorCfg
+from .pace_actuator import PaceDCMotorCfg
 from pace_sim2real import PaceSim2realEnvCfg, PaceSim2realSceneCfg, PaceCfg
+from .physics_cfg import PacePhysicsCfg
 import torch
 
 import os
@@ -148,4 +149,6 @@ class A2PaceEnvCfg(PaceSim2realEnvCfg):
 
         # robot sim and control settings
         self.sim.dt = 0.005  # 200Hz simulation
+        self.sim.physics = PacePhysicsCfg()  # physics backend presets, same as basic-locomotion-isaaclab
+        self.sim.use_newton_actuators = False  # PaceDCMotorCfg is not a Newton-native actuator
         self.decimation = 1  # 200Hz control

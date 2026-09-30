@@ -11,7 +11,8 @@ import isaaclab.sim as sim_utils
 from isaaclab.assets import ArticulationCfg
 from isaaclab.utils import configclass
 from pace_sim2real import PaceCfg, PaceSim2realEnvCfg, PaceSim2realSceneCfg
-from pace_sim2real.utils import PaceDCMotorCfg
+from .physics_cfg import PacePhysicsCfg
+from .pace_actuator import PaceDCMotorCfg
 
 
 ISAAC_ASSET_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -174,4 +175,6 @@ class PiperLPaceEnvCfg(PaceSim2realEnvCfg):
         super().__post_init__()
 
         self.sim.dt = 0.005  # 200 Hz simulation.
+        self.sim.physics = PacePhysicsCfg()  # physics backend presets, same as basic-locomotion-isaaclab
+        self.sim.use_newton_actuators = False  # PaceDCMotorCfg is not a Newton-native actuator
         self.decimation = 1  # 200 Hz control.
