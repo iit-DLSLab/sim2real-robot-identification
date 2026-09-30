@@ -14,7 +14,7 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": "tasks.aliengo_pace_env_cfg:AliengoPaceEnvCfg",
+        "env_cfg_entry_point": "tasks.a2_pace_env_cfg:A2PaceEnvCfg",
     },
 )
 

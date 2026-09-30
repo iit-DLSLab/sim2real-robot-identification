@@ -1,6 +1,6 @@
 import numpy as np
 
-robot = 'go2'  # 'aliengo', 'go1', 'go2', 'b2', 'hyqreal2', 'z1', 'piper_l', 'a2', "pegasus"
+robot = 'a2'  # 'aliengo', 'go1', 'go2', 'b2', 'hyqreal2', 'z1', 'piper_l', 'a2', "pegasus"
 
 
 USE_MUJOCO_SIMULATION = False
