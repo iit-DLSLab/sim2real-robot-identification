@@ -6,15 +6,15 @@ variables:
 channels:
 - conda-forge
 - nvidia
-- robostack-staging
+- https://prefix.dev/robostack-lyrical
 dependencies:
 - pip
 - python
 - numpy
-- ros-humble-desktop
-- ros-humble-rmw-cyclonedds-cpp
-- ros-humble-rosidl-generator-dds-idl
-- ros-humble-plotjuggler-ros
+- ros-lyrical-desktop
+- ros-lyrical-rmw-cyclonedds-cpp
+- ros-lyrical-rosidl-generator-dds-idl
+- ros-lyrical-plotjuggler-ros
 - compilers 
 - cmake 
 - pkg-config 

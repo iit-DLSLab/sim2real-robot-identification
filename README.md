@@ -33,21 +33,23 @@ The models (usd and xml) identified so far can be found in the folder **robot_mo
 ## Installation
 1. install [miniforge](https://github.com/conda-forge/miniforge/releases) (x86_64 or arm64 depending on your platform) or [pixi](https://pixi.prefix.dev/latest/installation/) - the latter for full reproducibility.
 
-2. create an environment using the file in the folder [installation](./deploy/installation):
+2. create an environment using one of the files in the folder [installation](./deploy/installation):
 
 ```bash
 # for conda
-conda env create -f mamba_environment.yaml
+conda env create -f mamba_environment_humble.yaml #for humble
+conda env create -f mamba_environment_lyrical.yaml #for lyrical
 conda activate sim2real_robot_identification_env
 
-# for pixi
-pixi shell --manifest-path installation/pixi.toml 
+# for pixi 
+pixi shell --manifest-path installation/pixi.toml -e humble #for humble
+pixi shell --manifest-path installation/pixi.toml -e lyrical #for lyrical
 ```
 
 4. install IsaacLab if you need it
 
 ## Run a collection
-This repo works best with [unitree-ros2-dls](https://github.com/iit-DLSLab/unitree-ros2-dls) for communicating with unitree go2, b2, a2, and z1 robots, and with [piper-ros2-dls2](https://github.com/iit-DLSLab/piper-ros2-dls2) for the agilex piper arm.
+This repo works best with [unitree-ros2-dls](https://github.com/iit-DLSLab/unitree-ros2-dls) for communicating with unitree go2, b2, a2, aliengo and z1 robots, and with [piper-ros2-dls2](https://github.com/iit-DLSLab/piper-ros2-dls2) for the agilex piper arm.
 
 1. Choose the robot and the gains in the  [config file](config.py) or add yours in the [robot_model](./robot_model) folder.
 

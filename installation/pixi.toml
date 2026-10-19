@@ -28,7 +28,7 @@ scipy = "*"
 ROS_LOCALHOST_ONLY = "1"
 
 [feature.humble]
-channels = ["https://repo.prefix.dev/robostack-staging"]
+channels = ["https://repo.prefix.dev/robostack-humble"]
 
 [feature.humble.dependencies]
 ros-humble-desktop = "*"
@@ -42,8 +42,10 @@ channels = ["https://repo.prefix.dev/robostack-lyrical"]
 [feature.lyrical.dependencies]
 ros-lyrical-desktop = "*"
 ros-lyrical-rmw-cyclonedds-cpp = "*"
+ros-lyrical-rosidl-generator-dds-idl = "*"
 ros-lyrical-plotjuggler-ros = "*"
 
 [environments]
-humble = ["common", "humble"]
+default = { features = ["common", "humble"], solve-group = "humble" }
+humble = { features = ["common", "humble"], solve-group = "humble" }
 lyrical = ["common", "lyrical"]
