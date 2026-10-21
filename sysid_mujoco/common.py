@@ -711,6 +711,7 @@ def build_parameter_dict(
     identify_center_of_mass: bool = False,
     identify_inertia_tensor: bool = False,
     tie_quadruped_inertias: bool = False,
+    frozen_joint_attributes: tuple[str, ...] = (),
 ):
     parameter_dict = sysid.ParameterDict()
     # Equality-coupled joints share one value per dynamic attribute.
@@ -741,14 +742,18 @@ def build_parameter_dict(
                 nominal=current_value,
                 min_value=lower,
                 max_value=upper,
+                frozen=attribute in frozen_joint_attributes,
                 modifier=make_shared_joint_attribute_modifier(
                     joint_group,
                     attribute,
                 ),
             )
-            # Initial guesses are adjusted independently of the nominal model.
-            # main() subsequently moves these values inside the requested bounds.
-            if attribute == "frictionloss":
+            # Frozen parameters are never applied, so the XML value is kept.
+            # Initial guesses of free ones are adjusted independently of the
+            # nominal model; main() subsequently moves them inside the bounds.
+            if parameter.frozen:
+                pass
+            elif attribute == "frictionloss":
                 parameter.value[:] = current_value*0.1
             elif attribute == "armature":
                 parameter.value[:] = current_value + np.ones_like(parameter.value) * 1e-2

@@ -101,7 +101,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--velocity-weight",
         type=float,
-        default=0.01,
+        default=0,
         help="Nonnegative velocity residual weight (default: 0.1; 0 disables its contribution).",
     )
     parser.add_argument(
@@ -137,7 +137,7 @@ def parse_args() -> argparse.Namespace:
         nargs=2,
         type=float,
         metavar=("LOWER", "UPPER"),
-        default=(0.001, 2.0),
+        default=(0.001, 6.0),
         help="Bounds for each joint damping parameter.",
     )
     parser.add_argument(
@@ -153,8 +153,19 @@ def parse_args() -> argparse.Namespace:
         nargs=2,
         type=float,
         metavar=("LOWER", "UPPER"),
-        default=(0.001, 2.0),
+        default=(0.001, 6.0),
         help="Bounds for each joint frictionloss parameter.",
+    )
+    parser.add_argument(
+        "--freeze-joint-params",
+        nargs="+",
+        choices=("armature", "frictionloss", "damping"),
+        default=(),
+        metavar="ATTRIBUTE",
+        help=(
+            "Joint attributes kept fixed at their XML values instead of being "
+            "identified (choices: armature, frictionloss, damping)."
+        ),
     )
     parser.add_argument(
         "--identify-link-mass",
@@ -657,6 +668,7 @@ def main() -> None:
         identify_center_of_mass=args.identify_center_of_mass,
         identify_inertia_tensor=args.identify_inertia_tensor,
         tie_quadruped_inertias=args.tie_quadruped_inertias,
+        frozen_joint_attributes=tuple(args.freeze_joint_params),
     )
     if delay_bounds is not None:
         add_shared_actuator_delay_parameter(params, fixed_base_spec, delay_bounds)
