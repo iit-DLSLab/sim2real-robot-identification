@@ -489,8 +489,8 @@ class Data_Collection_Node(Node):
 
         # Publish the desired joint positions to the control signal --------------------------------
         control_signal_msg = ControlSignal()
-        control_signal_msg.timestamp = float(self.get_clock().now().nanoseconds)
-        control_signal_msg.sequence_id = int(self.sequence_id % 1000)  # To avoid overflow, we reset the sequence id after it reaches a certain value
+        control_signal_msg.header.timestamp = int(self.get_clock().now().nanoseconds)
+        control_signal_msg.header.sequence_id = int(self.sequence_id % 1000)  # To avoid overflow, we reset the sequence id after it reaches a certain value
         self.sequence_id += 1
         control_signal_msg.joints_position = np.array(desired_joint_pos).flatten().tolist()
         control_signal_msg.joints_velocity = np.zeros(len(desired_joint_pos)).tolist()
