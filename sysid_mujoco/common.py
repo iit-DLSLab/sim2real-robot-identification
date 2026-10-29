@@ -658,20 +658,127 @@ def group_quadruped_leg_bodies(body_names: list[str]) -> list[tuple[str, ...]]:
     return groups
 
 
-def make_shared_body_inertia_modifier(sysid, body_names: tuple[str, ...]):
-    """Create one modifier that applies an inertial parameter to many bodies."""
+_MIRROR_TOLERANCE = 1e-3  # [m] CoM components below it carry no mirroring information
+
+
+def quadruped_mirror_signs(
+    ipos: np.ndarray,
+    reference_ipos: np.ndarray,
+    body_name: str,
+    reference_name: str,
+) -> np.ndarray:
+    """Signs mapping a CoM offset of the reference leg body to another leg body.
+
+    An axis is mirrored when the nominal CoMs are mirrored along it. Without
+    information (small components), the lateral axis is mirrored between left
+    and right legs and the others are not.
+    """
+    signs = np.ones(3)
+    for axis in range(3):
+        if min(abs(ipos[axis]), abs(reference_ipos[axis])) > _MIRROR_TOLERANCE:
+            signs[axis] = 1.0 if ipos[axis] * reference_ipos[axis] > 0.0 else -1.0
+        elif axis == 1 and body_name[1] != reference_name[1]:
+            signs[axis] = -1.0
+    return signs
+
+
+def shared_body_inertia_maps(
+    sysid,
+    model,
+    model_spec,
+    body_names: tuple[str, ...],
+    inertia_type,
+) -> list[tuple[str, np.ndarray, np.ndarray]]:
+    """Affine maps ``gain * value + offset`` from the first body's parameter to each body.
+
+    Every body receives the same correction of its own nominal values, so the
+    nominal parameter reproduces the nominal model of all bodies. The mass is
+    scaled by the same factor and CoM offsets are mirrored like the nominal
+    CoMs. For the pseudo-inertia, a reflection S maps the Cholesky factor U to
+    S U S: log-mass and log-stretches are shared, shears and CoM are mirrored.
+    """
+    reference_name = body_names[0]
+    reference = model.body(reference_name)
+    if inertia_type == sysid.InertiaType.Pseudo:
+        # Inertia setup may modify the spec; isolate it from the fitted one.
+        reference_theta = sysid.model_modifier.theta_inertia_from_body(
+            model_spec.copy(),
+            reference_name,
+        )
+
+    maps = []
+    for body_name in body_names:
+        body = model.body(body_name)
+        signs = quadruped_mirror_signs(
+            body.ipos,
+            reference.ipos,
+            body_name,
+            reference_name,
+        )
+        mass_ratio = body.mass[0] / reference.mass[0]
+        if inertia_type == sysid.InertiaType.Mass:
+            gain = np.array([mass_ratio])
+            offset = np.zeros(1)
+        elif inertia_type == sysid.InertiaType.MassIpos:
+            gain = np.concatenate(([mass_ratio], signs))
+            offset = np.concatenate(([0.0], body.ipos - signs * reference.ipos))
+        else:
+            # theta = [alpha, d1, d2, d3, s12, s23, s13, t1, t2, t3]
+            shear_signs = signs[[0, 1, 0]] * signs[[1, 2, 2]]
+            gain = np.concatenate((np.ones(4), shear_signs, signs))
+            theta = sysid.model_modifier.theta_inertia_from_body(
+                model_spec.copy(),
+                body_name,
+            )
+            offset = theta - gain * reference_theta
+        maps.append((body_name, gain, offset))
+    return maps
+
+
+def make_shared_body_inertia_modifier(
+    sysid,
+    model,
+    model_spec,
+    body_names: tuple[str, ...],
+    inertia_type,
+):
+    """Create one modifier that applies an inertial parameter to many bodies.
+
+    The parameter holds the values of the first body; the others receive the
+    same correction of their nominal values, mirrored between legs.
+    """
+    body_maps = shared_body_inertia_maps(
+        sysid,
+        model,
+        model_spec,
+        body_names,
+        inertia_type,
+    )
 
     def modifier(spec, param):
-        for body_name in body_names:
+        for body_name, gain, offset in body_maps:
+            value = gain * np.asarray(param.value, dtype=np.float64) + offset
             if param.inertia_type == sysid.InertiaType.Mass:
                 # Avoid MuJoCo 3.11's shape-(1,) array/scalar setter mismatch.
                 sysid.model_modifier.apply_body_mass_ipos(
                     spec,
                     body_name,
-                    mass=param.value[0],
+                    mass=value[0],
+                )
+            elif param.inertia_type == sysid.InertiaType.MassIpos:
+                sysid.model_modifier.apply_body_mass_ipos(
+                    spec,
+                    body_name,
+                    mass=value[0],
+                    ipos=value[1:4],
+                    rot_inertia_scale=param.scale_rot_inertia,
                 )
             else:
-                sysid.model_modifier.apply_body_inertia(spec, body_name, param)
+                sysid.model_modifier.apply_body_theta_inertia(
+                    spec,
+                    body_name,
+                    value,
+                )
 
     return modifier
 
@@ -827,12 +934,18 @@ def build_parameter_dict(
                 print("Shared quadruped inertial groups:", shared_groups)
 
         for body_group in body_groups:
-            # A shared group uses its first body's nominal inertia and applies
-            # each fitted candidate to all corresponding bodies through a modifier.
+            # A shared group is parameterized by its first body's inertia; the
+            # modifier applies the same mirrored correction to the other bodies.
             body_name = body_group[0]
             if len(body_group) > 1:
                 param_prefix = f"shared_{body_name.split('_', 1)[1]}"
-                modifier = make_shared_body_inertia_modifier(sysid, body_group)
+                modifier = make_shared_body_inertia_modifier(
+                    sysid,
+                    model,
+                    model_spec,
+                    body_group,
+                    inertia_type,
+                )
             else:
                 param_prefix = body_name
                 modifier = None

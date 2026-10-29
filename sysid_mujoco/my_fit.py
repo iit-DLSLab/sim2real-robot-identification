@@ -239,7 +239,8 @@ def parse_args() -> argparse.Namespace:
         default=True,
         help=(
             "Use one mass/CoM/inertia parameter for corresponding FL, FR, RL, "
-            "and RR bodies (default: enabled)."
+            "and RR bodies (default: enabled). It holds the FL values; the "
+            "other legs get the same correction, mirrored between legs."
         ),
     )
     args = parser.parse_args()

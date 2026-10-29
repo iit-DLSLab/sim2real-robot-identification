@@ -51,6 +51,7 @@ import torch
 import mujoco
 import mujoco.viewer
 import config
+import excitation_trajectory
 
 
 # Set the priority of the process
@@ -146,8 +147,11 @@ class Data_Collection_Node(Node):
         self.hip_setpoint1 = self.mjModel.key_qpos[keyframe_sys_id_1][7]
         self.thigh_setpoint1 = self.mjModel.key_qpos[keyframe_sys_id_1][8]
         self.calf_setpoint1 = self.mjModel.key_qpos[keyframe_sys_id_1][9]
-        
-        
+
+        # Excitation Trajectory only variables (precomputed, see excitation_trajectory.py)
+        self.excitation_trajectory = None
+
+
         self.saved_actual_joints_position = None
         self.saved_actual_joints_velocity = None
         self.saved_desired_joints_position = None
@@ -241,6 +245,34 @@ class Data_Collection_Node(Node):
         )
 
         self.start_collection_time = time.time()
+
+    def prepare_excitation_trajectory(self, seed, speed_scale=excitation_trajectory.DEFAULT_SPEED_SCALE):
+        """Generate the excitation trajectory and print its summary, without commanding the robot.
+
+        It stays inside the joint box of the chirp (sys_id_1 and sys_id_2 keyframes), and starts from and
+        returns to the current desired posture.
+        """
+        leg_setpoint_1 = np.array([self.hip_setpoint1, self.thigh_setpoint1, self.calf_setpoint1])
+        leg_setpoint_2 = np.array([self.hip_setpoint2, self.thigh_setpoint2, self.calf_setpoin2])
+        self.excitation_trajectory = excitation_trajectory.quadruped_excitation_trajectory(
+            leg_setpoint_1,
+            leg_setpoint_2,
+            start=self.idle_joint_positions.flatten(),
+            frequency=CONTROL_FREQ,
+            seed=seed,
+            speed_scale=speed_scale,
+            mirror_right_hips=config.robot != "pegasus",  # same hip convention as the chirp
+        )
+        joint_names = [f"{leg}_{joint}" for leg in ("FL", "FR", "RL", "RR") for joint in ("hip", "thigh", "calf")]
+        print(self.excitation_trajectory.describe(joint_names))
+
+    def accept_excitation_trajectory(self):
+        """Start timing only after the operator has approved the trajectory."""
+        self.start_collection_time = time.time()
+
+    def reject_excitation_trajectory(self):
+        self.excitation_trajectory = None
+        self.start_collection_time = None
 
 
     def _get_desired_positions_and_gains(self, ):
@@ -359,8 +391,8 @@ class Data_Collection_Node(Node):
             # Complete after trajectory duration
             return time.time() - self.start_collection_time > self.chirp_traj_time
 
-    def _save_trajectory_data(self, dataset_prefix):
-        """Save collected trajectory data to file"""
+    def _save_trajectory_data(self, dataset_prefix, metadata=None):
+        """Save collected trajectory data to file, with optional extra entries (e.g. the excitation seed)"""
 
         # HACK
         num_steps = self.saved_actual_joints_position.shape[0]
@@ -393,6 +425,7 @@ class Data_Collection_Node(Node):
             "des_dof_vel": dof_target_vel_buffer.cpu(),
             "kp": self.Kp,
             "kd": self.Kd,
+            **(metadata or {}),
         }, dataset_path)
         print(f"Dataset saved to {dataset_path}")
 
@@ -478,6 +511,31 @@ class Data_Collection_Node(Node):
                     self.console.setpoint_collection = False
                     self.console.isActivated = False
                     print("Setpoint collection completed.")
+
+        elif(self.console.isActivated and self.console.trajectory_collection and self.console.trajectory_type == "excitation"):
+            # Defensive fallback: normal activation prepares and accepts in Console.
+            if self.excitation_trajectory is None:
+                self.prepare_excitation_trajectory(excitation_trajectory.DEFAULT_SEED)
+                self.accept_excitation_trajectory()
+
+            # The whole trajectory is precomputed: sample it at the elapsed time
+            elapsed_time = time.time() - self.start_collection_time
+            desired_joint_pos = self.excitation_trajectory.sample(elapsed_time).reshape(4, 3)
+            Kp = self.Kp
+            Kd = self.Kd
+
+            # Collect data
+            self._collect_trajectory_data(joints_pos, joints_vel, desired_joint_pos)
+
+            # Complete after the trajectory duration; afterwards the node behaves as at the end of the chirp
+            if elapsed_time > self.excitation_trajectory.duration:
+                self._save_trajectory_data("excitation", {
+                    "excitation_seed": self.excitation_trajectory.seed,
+                    "excitation_speed_scale": self.excitation_trajectory.speed_scale,
+                })
+                self.excitation_trajectory = None
+                self.console.trajectory_collection = False
+                print("Excitation trajectory collection completed.")
 
         elif(self.console.isActivated and self.console.trajectory_collection):
             # Initialize setpoint if needed

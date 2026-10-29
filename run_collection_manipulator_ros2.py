@@ -50,6 +50,7 @@ import torch
 import mujoco
 import mujoco.viewer
 import config
+import excitation_trajectory
 
 
 # Set the priority of the process
@@ -147,7 +148,10 @@ class Data_Collection_Node(Node):
         # Chirp Trajectory only variables
         self.chirp_traj_time = INITIAL_CHIRP_TRAJECTORY_DURATION
         self.calibration_reference_trajectory = None
-        
+
+        # Excitation Trajectory only variables (precomputed, see excitation_trajectory.py)
+        self.excitation_trajectory = None
+
         self.saved_actual_joints_position = None
         self.saved_actual_joints_velocity = None
         self.saved_desired_joints_position = None
@@ -260,6 +264,31 @@ class Data_Collection_Node(Node):
 
         self.start_collection_time = time.time()
 
+    def prepare_excitation_trajectory(self, seed, speed_scale=excitation_trajectory.DEFAULT_SPEED_SCALE):
+        """Generate the excitation trajectory and print its summary, without commanding the robot.
+
+        It stays inside the joint box of the chirp (sys_id_1 and sys_id_2 keyframes), and starts from and
+        returns to the current desired posture.
+        """
+        self.excitation_trajectory = excitation_trajectory.manipulator_excitation_trajectory(
+            self.home_position,
+            self.goal_position,
+            start=self.idle_joint_position,
+            frequency=CONTROL_FREQ,
+            seed=seed,
+            speed_scale=speed_scale,
+        )
+        joint_names = [self.mjModel.joint(i).name for i in range(len(self.home_position))]
+        print(self.excitation_trajectory.describe(joint_names))
+
+    def accept_excitation_trajectory(self):
+        """Start timing only after the operator has approved the trajectory."""
+        self.start_collection_time = time.time()
+
+    def reject_excitation_trajectory(self):
+        self.excitation_trajectory = None
+        self.start_collection_time = None
+
 
     def _get_desired_positions_and_gains(self, ):
         """Get desired joint positions and control gains based on collection type"""
@@ -339,8 +368,8 @@ class Data_Collection_Node(Node):
             # Complete after trajectory duration
             return time.time() - self.start_collection_time > self.chirp_traj_time
 
-    def _save_trajectory_data(self, dataset_prefix):
-        """Save collected trajectory data to file"""
+    def _save_trajectory_data(self, dataset_prefix, metadata=None):
+        """Save collected trajectory data to file, with optional extra entries (e.g. the excitation seed)"""
 
         # HACK
         num_steps = self.saved_actual_joints_position.shape[0]
@@ -374,6 +403,7 @@ class Data_Collection_Node(Node):
             "des_dof_torque": dof_target_commanded_torque_buffer.cpu(),
             "kp": self.Kp,
             "kd": self.Kd,
+            **(metadata or {}),
         }, dataset_path)
         print(f"Dataset saved to {dataset_path}")
 
@@ -447,6 +477,33 @@ class Data_Collection_Node(Node):
                 desired_joint_pos = self.home_position
                 Kp = self.Kp
                 Kd = self.Kd
+
+        elif(self.console.isActivated and self.console.trajectory_collection and self.console.trajectory_type == "excitation"):
+            # Defensive fallback: normal activation prepares and accepts in Console.
+            if self.excitation_trajectory is None:
+                self.prepare_excitation_trajectory(excitation_trajectory.DEFAULT_SEED)
+                self.accept_excitation_trajectory()
+
+            # The whole trajectory is precomputed: sample it at the elapsed time
+            elapsed_time = time.time() - self.start_collection_time
+            desired_joint_pos = self.excitation_trajectory.sample(elapsed_time)
+            Kp = self.Kp
+            Kd = self.Kd
+
+            # Collect data
+            self._collect_trajectory_data(joints_pos, joints_vel, desired_joint_pos)
+
+            # Complete after the trajectory duration, holding the final posture as the chirp does
+            if elapsed_time > self.excitation_trajectory.duration:
+                self.idle_joint_position = copy.deepcopy(desired_joint_pos)
+                self._save_trajectory_data("excitation", {
+                    "excitation_seed": self.excitation_trajectory.seed,
+                    "excitation_speed_scale": self.excitation_trajectory.speed_scale,
+                })
+                self.excitation_trajectory = None
+                self.console.trajectory_collection = False
+                self.console.isActivated = False
+                print("Excitation trajectory collection completed.")
 
         elif(self.console.isActivated and self.console.trajectory_collection):
             # Initialize setpoint if needed
