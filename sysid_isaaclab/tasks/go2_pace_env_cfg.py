@@ -22,7 +22,7 @@ GO2_HIP_ACTUATOR_CFG = PaceDCMotorCfg(
     saturation_effort=23.7,
     effort_limit=23.7,
     velocity_limit=30.1,
-    stiffness={".*": 20.0},  # P gain in Nm/rad
+    stiffness={".*": 25.0},  # P gain in Nm/rad
     damping={".*": 1.5},  # D gain in Nm s/rad
     encoder_bias={".*": 0.0},  # encoder bias in radians
     # note: modeling coulomb friction if friction = dynamic_friction
@@ -39,7 +39,7 @@ GO2_THIGH_ACTUATOR_CFG = PaceDCMotorCfg(
     saturation_effort=23.7,
     effort_limit=23.7,
     velocity_limit=30.1,
-    stiffness={".*": 20.0},  # P gain in Nm/rad
+    stiffness={".*": 25.0},  # P gain in Nm/rad
     damping={".*": 1.5},  # D gain in Nm s/rad
     encoder_bias={".*": 0.0},  # encoder bias in radians
     # note: modeling coulomb friction if friction = dynamic_friction
@@ -55,7 +55,7 @@ GO2_CALF_ACTUATOR_CFG = PaceDCMotorCfg(
     saturation_effort=45.43,
     effort_limit=45.43,
     velocity_limit=15.7,
-    stiffness={".*": 20.0},  # P gain in Nm/rad
+    stiffness={".*": 25.0},  # P gain in Nm/rad
     damping={".*": 1.5},  # D gain in Nm s/rad
     encoder_bias={".*": 0.0},  # encoder bias in radians
     # note: modeling coulomb friction if friction = dynamic_friction
@@ -104,7 +104,7 @@ GO2_CFG = ArticulationCfg(
 class Go2PaceCfg(PaceCfg):
     """Pace configuration for Go2 robot."""
     robot_name: str = "go2_sim"
-    data_dir: str = f"{ISAAC_ASSET_DIR}/../../datasets/go2/traj_0.pt"  # located in pace_sim2real/data/go2_sim/chirp_data.pt
+    data_dir: str = f"{ISAAC_ASSET_DIR}/../../datasets/go2"  # every .pt inside is fitted, as in the MuJoCo fit
     bounds_params: torch.Tensor = torch.zeros((49, 2))  # 12 + 12 + 12 + 12 + 1 = 49 parameters to optimize
     joint_order: list[str] = [
         "FL_hip_joint",
@@ -126,7 +126,7 @@ class Go2PaceCfg(PaceCfg):
         self.bounds_params[:12, 0] = 1e-5
         self.bounds_params[:12, 1] = 1.0  # armature between 1e-5 - 1.0 [kgm2]
         self.bounds_params[12:24, 1] = 7.0  # dof_damping between 0.0 - 7.0 [Nm s/rad]
-        self.bounds_params[24:36, 1] = 1.0  # friction between 0.0 - 1.0
+        self.bounds_params[24:36, 1] = 2.0  # friction between 0.0 - 2.0
         self.bounds_params[36:48, 0] = -0.0
         self.bounds_params[36:48, 1] = 0.0  # bias between -0.1 - 0.1 [rad]
         self.bounds_params[48, 1] = 5.0  # delay between 0.0 - 5.0 [sim steps]

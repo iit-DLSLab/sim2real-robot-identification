@@ -46,7 +46,7 @@ pixi shell --manifest-path installation/pixi.toml -e humble #for humble
 pixi shell --manifest-path installation/pixi.toml -e lyrical #for lyrical
 ```
 
-4. install IsaacLab if you need it
+4. install IsaacLab and pace-sim2real (that is a submodule of this repo) if you need it
 
 ## Run a collection
 This repo works best with [unitree-ros2-dls](https://github.com/iit-DLSLab/unitree-ros2-dls) for communicating with unitree go2, b2, a2, aliengo and z1 robots, and with [piper-ros2-dls2](https://github.com/iit-DLSLab/piper-ros2-dls2) for the agilex piper arm.
@@ -66,7 +66,9 @@ python3 run_collection_manipulator_ros2.py
 ```bash
 startCollection
 trajectory
+chirp        # or: excitation
 ```
+`chirp` moves all the joints together back and forth between the two keyframes. `excitation` ([excitation_trajectory.py](excitation_trajectory.py)) stays in the same joint box, but gives every joint its own chirp plus a slow posture sweep, which makes the parameters easier to identify; it asks for a seed (use different seeds for the fit and the validation trajectories) and a speed scale in (0, 1] (default 0.5, the same motion slowed down; increase it once the motion looks safe), prints the joint ranges and peak velocities, and waits for confirmation. It is saved as `excitation_N.pt`.
 
 5. Close the script
 ```bash
@@ -85,8 +87,18 @@ python3 datasets/plot_joint_trajectories.py
 Add a new [task](./sysid_isaaclab/tasks) for a new robot. Then
 
 ```bash
-python3 sysid_isaaclab/my_fit.py --headless
+python3 sysid_isaaclab/my_fit.py                   # CMA-ES (default): one best combination
+python3 sysid_isaaclab/my_fit.py --optimizer ot    # a set of plausible combinations
 ```
+
+With `--optimizer ot`, a diversity-regularized version of the optimal-transport optimizer of [arXiv:2605.02147](https://arxiv.org/abs/2605.02147) ([ot_optimizer.py](./sysid_isaaclab/ot_optimizer.py)) returns `num_particles` parameter combinations $\Theta$ solving
+
+$$\min_{\Theta}\ \frac{1}{N}\sum_i \frac{L(\theta_i)}{L_{best}} - \lambda\, D(\Theta) \quad \text{s.t.} \quad L(\theta_i) \le (1 + \text{loss\_tolerance})\, L_{best}$$
+
+where $D$ is a log-det (DPP) diversity. They are saved in `plausible_params.pt` in the log folder, and the per-joint range of every parameter over the set is printed at the end (a wide range means that parameter is not identifiable from the data). The defaults are in `OTSinkhornOptimizerCfg`; to change them for a robot, add a field to its `PaceCfg`, e.g. `ot: OTSinkhornOptimizerCfg = OTSinkhornOptimizerCfg(num_particles=64, loss_tolerance=0.05)`.
+
+With both optimizers, the joint parameters are searched linearly within their bounds, as in PACE, and:
+- `--identify-link-mass`, `--identify-center-of-mass` (mass + CoM) and `--identify-inertia-tensor` (mass + CoM + inertia) also identify the inertial parameters of the bodies, with the same options of the MuJoCo fit (`--inertial-bodies`, `--tie-quadruped-inertias`, bounds). They are corrections of the nominal USD values: mass scale, CoM offset in the body frame (mirrored between legs when tied) and scales of the principal second moments of the mass distribution, so every value within the bounds is a physically consistent body. The identified values are saved in `body_params.pt` (CMA-ES) or under `inertial` in `plausible_params.pt` (OT). On Newton, Isaac Lab warns that runtime CoM changes may be unstable: prefer `physics=physx` with `--identify-center-of-mass`.
 
 ## Run a calibration in Mujoco
 

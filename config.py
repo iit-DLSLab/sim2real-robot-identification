@@ -1,28 +1,30 @@
 import numpy as np
 
-robot = 'a2'  # 'aliengo', 'go1', 'go2', 'b2', 'hyqreal2', 'z1', 'piper_l', 'a2', "pegasus"
+robot = 'go2'  # 'aliengo', 'go1', 'go2', 'b2', 'hyqreal2', 'z1', 'piper_l', 'a2', "pegasus"
 
 
 USE_MUJOCO_SIMULATION = False
-USE_MUJOCO_RENDER = True
+USE_MUJOCO_RENDER = USE_MUJOCO_SIMULATION = False
+
 # ----------------------------------------------------------------------------------------------------------------
 if(robot == "aliengo"):
+    # Order FL, FR, RL, RR
     Kp = np.array([25., 25., 25.,
                    25., 25., 25.,
                    25., 25., 25.,
                    25., 25., 25.])
                    
-    Kd = np.array([0.5, 0.5, 0.5,
-                   0.5, 0.5, 0.5,
-                   0.5, 0.5, 0.5,
-                   0.5, 0.5, 0.5])
+    Kd = np.array([1.5, 1.5, 1.5,
+                   1.5, 1.5, 1.5,
+                   1.5, 1.5, 1.5,
+                   1.5, 1.5, 1.5])
 
 elif(robot == "go2"):
     # Order FL, FR, RL, RR
-    Kp = np.array([20., 20., 20.,
-                   20., 20., 20.,
-                   20., 20., 20.,
-                   20., 20., 20.])
+    Kp = np.array([25., 25., 25.,
+                   25., 25., 25.,
+                   25., 25., 25.,
+                   25., 25., 25.])
                    
     Kd = np.array([1.5, 1.5, 1.5,
                    1.5, 1.5, 1.5,
@@ -67,15 +69,15 @@ elif(robot == "hyqreal2"):
 
 elif(robot == "pegasus"):
     # Order FL, FR, RL, RR
-    Kp = np.array([200., 200., 200.,
-                   200., 200., 200.,
-                   200., 200., 200.,
-                   200., 200., 200.])
+    Kp = np.array([120., 120., 120.,
+                   120., 120., 120.,
+                   120., 120., 120.,
+                   120., 120., 120.])
 
-    Kd = np.array([10., 10., 10.,
-                   10., 10., 10.,
-                   10., 10., 10.,
-                   10., 10., 10.])
+    Kd = np.array([6., 6., 6.,
+                   6., 6., 6.,
+                   6., 6., 6.,
+                   6., 6., 6.])
 
 elif(robot =="z1"):
     # Order joint1-joint2-joint3-joint4-joint5-joint6-gripper

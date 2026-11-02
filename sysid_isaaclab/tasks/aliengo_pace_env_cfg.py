@@ -23,7 +23,7 @@ ALIENGO_HIP_ACTUATOR_CFG = PaceDCMotorCfg(
     effort_limit=35.278,
     velocity_limit=20.0,
     stiffness={".*": 25.0},  # P gain in Nm/rad
-    damping={".*": 0.5},  # D gain in Nm s/rad
+    damping={".*": 1.5},  # D gain in Nm s/rad
     encoder_bias={".*": 0.0},  # encoder bias in radians
     # note: modeling coulomb friction if friction = dynamic_friction
     # > in newer Isaac Sim versions, friction is renamed to static_friction
@@ -40,7 +40,7 @@ ALIENGO_THIGH_ACTUATOR_CFG = PaceDCMotorCfg(
     effort_limit=35.278,
     velocity_limit=20.0,
     stiffness={".*": 25.0},  # P gain in Nm/rad
-    damping={".*": 0.5},  # D gain in Nm s/rad
+    damping={".*": 1.5},  # D gain in Nm s/rad
     encoder_bias={".*": 0.0},  # encoder bias in radians
     # note: modeling coulomb friction if friction = dynamic_friction
     # > in newer Isaac Sim versions, friction is renamed to static_friction
@@ -56,7 +56,7 @@ ALIENGO_CALF_ACTUATOR_CFG = PaceDCMotorCfg(
     effort_limit=44.4,
     velocity_limit=15.89,
     stiffness={".*": 25.0},  # P gain in Nm/rad
-    damping={".*": 0.5},  # D gain in Nm s/rad
+    damping={".*": 1.5},  # D gain in Nm s/rad
     encoder_bias={".*": 0.0},  # encoder bias in radians
     # note: modeling coulomb friction if friction = dynamic_friction
     # > in newer Isaac Sim versions, friction is renamed to static_friction

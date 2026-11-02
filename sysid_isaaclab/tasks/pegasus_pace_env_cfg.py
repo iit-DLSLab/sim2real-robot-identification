@@ -93,7 +93,7 @@ PEGASUS_CFG = ArticulationCfg(
         joint_vel={".*": 0.0},
     ),
 
-    actuators={"hip": GO2_HIP_ACTUATOR_CFG, "thigh": GO2_THIGH_ACTUATOR_CFG, "calf": GO2_CALF_ACTUATOR_CFG},
+    actuators={"hip": PEGASUS_HIP_ACTUATOR_CFG, "thigh": PEGASUS_THIGH_ACTUATOR_CFG, "calf": PEGASUS_CALF_ACTUATOR_CFG},
     soft_joint_pos_limit_factor=0.95,
 )
 
@@ -103,7 +103,7 @@ PEGASUS_CFG = ArticulationCfg(
 class PegasusPaceCfg(PaceCfg):
     """Pace configuration for Pegasus robot."""
     robot_name: str = "pegasus_sim"
-    data_dir: str = f"{ISAAC_ASSET_DIR}/../../datasets/pegasus/traj_0.pt"  # located in pace_sim2real/data/pegasus_sim/chirp_data.pt
+    data_dir: str = f"{ISAAC_ASSET_DIR}/../../datasets/pegasus/trajectory_1.pt"  # located in pace_sim2real/data/pegasus_sim/chirp_data.pt
     bounds_params: torch.Tensor = torch.zeros((49, 2))  # 12 + 12 + 12 + 12 + 1 = 49 parameters to optimize
     joint_order: list[str] = [
         "FL_hip_joint",

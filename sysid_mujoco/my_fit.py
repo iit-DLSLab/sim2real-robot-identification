@@ -145,7 +145,7 @@ def parse_args() -> argparse.Namespace:
         nargs=2,
         type=float,
         metavar=("LOWER", "UPPER"),
-        default=(0.001, 0.5),
+        default=(0.001, 1.0),
         help="Bounds for each joint armature parameter.",
     )
     parser.add_argument(
@@ -326,6 +326,12 @@ def joint_position_velocity_residual(
     params, predicted, measured, model, return_pred_all, *, velocity_weight=0.1, **kwargs
 ):
     """Keep sysid normalization, with finite residuals for stationary joints."""
+    # The rollout stores the sensors computed inside mj_step, i.e. on the state
+    # before the step, with the time after it: shift them back one timestep,
+    # otherwise the simulation lags the measurements by one step.
+    predicted = sysid.TimeSeries(
+        predicted.times - model.opt.timestep, predicted.data, predicted.signal_mapping
+    )
     # Compare simulation and measurements only at matching timestamps within
     # the rollout window. This aligns samples without introducing another delay.
     measured = sysid.apply_delayed_ts_window(measured, predicted, 0.0, 0.0)
@@ -490,6 +496,12 @@ def build_model_sequences_from_source(
         )
         if _is_piper_robot(robot):
             processed = _extend_piper_state_to_joint8(processed, model)
+        # The rollout applies one recorded control per simulation step.
+        if not np.allclose(np.diff(processed.times), model.opt.timestep, rtol=0.0, atol=1e-4):
+            raise ValueError(
+                f"{dataset_path} is not sampled at the simulation timestep "
+                f"({model.opt.timestep:g} s, config.frequency_collection)."
+            )
         # Each chunk becomes one rollout while all rollouts share fitted parameters.
         for chunk in chunk_processed_trajectory(processed, chunk_size):
             measurement_data, control_data, initial_state = processed_to_sysid_trajectory(sysid, model, chunk)
@@ -527,6 +539,36 @@ def _safe_parameter_distribution_spacing():
     finally:
         # Restore Plotly even if report generation raises an exception.
         plotly_subplots.make_subplots = original_make_subplots
+
+
+@contextmanager
+def _observation_signal_curves(xml_predictions):
+    """Relabel recorded observations and add the XML-model rollout.
+
+    MuJoCo 3.11.0 calls the recorded data `nominal`, the same label the
+    parameter sections use for the XML values. `xml_predictions` maps each
+    observation report title to the rollout of the unmodified XML model.
+    """
+    from mujoco.sysid.report import defaults
+
+    original_signal_report = defaults.SignalReport
+
+    def signal_report_with_xml_curve(title, *args, ts_dict=None, **kwargs):
+        # Control reports reuse the sequence titles but contain no recordings.
+        if ts_dict is not None and "nominal" in ts_dict:
+            # Keep insertion order and append: Plotly colours traces by position.
+            ts_dict = {
+                "measured" if name == "nominal" else name: ts
+                for name, ts in ts_dict.items()
+            }
+            ts_dict["xml"] = xml_predictions[title]
+        return original_signal_report(title, *args, ts_dict=ts_dict, **kwargs)
+
+    defaults.SignalReport = signal_report_with_xml_curve
+    try:
+        yield
+    finally:
+        defaults.SignalReport = original_signal_report
 
 
 def display_report(report, report_path: Path) -> Path:
@@ -680,11 +722,15 @@ def main() -> None:
     params.move_off_bounds()
    
     # Bind the CLI weight once so optimization and the report use the same loss.
+    # No control resampling: sysid resamples to ceil(duration / timestep) + 1
+    # samples, one too many with float32 timestamps, which compresses the
+    # control in time and delays it by up to one step at the end.
     residual_fn = sysid.build_residual_fn(
         models_sequences=model_sequences,
         modify_residual=partial(
             joint_position_velocity_residual, velocity_weight=args.velocity_weight
         ),
+        resample_true=False,
     )
 
     # Estimate all free components together; Jacobian scaling handles mixed units.
@@ -700,8 +746,28 @@ def main() -> None:
     output_dir = args.output_dir or default_output_dir(args.robot)
     output_dir.mkdir(parents=True, exist_ok=True)
     
+    # Also roll out the unmodified XML model; the initial guess differs from it.
+    xml_params = params.copy()
+    xml_params.reset()
+    _, xml_rollouts, _ = residual_fn(
+        xml_params.as_vector(), xml_params, return_pred_all=True
+    )
+    # sysid.default_report titles one observation report per sequence like this.
+    report_titles = [
+        f"Sequence: {sequences.name}\n{sequence}"
+        for sequences in model_sequences
+        for sequence in sequences.sequence_name
+    ]
+    xml_predictions = {
+        title: rollout[0]
+        for title, rollout in zip(report_titles, xml_rollouts, strict=True)
+    }
+
     # Compare initial and optimized parameters using the same weighted residual.
-    with _safe_parameter_distribution_spacing():
+    with (
+        _safe_parameter_distribution_spacing(),
+        _observation_signal_curves(xml_predictions),
+    ):
         report = sysid.default_report(
             models_sequences=model_sequences,
             initial_params=params,

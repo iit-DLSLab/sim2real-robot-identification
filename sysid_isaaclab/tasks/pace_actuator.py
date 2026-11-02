@@ -2,8 +2,9 @@
 # Author: Filip Bjelonic
 # Licensed under the Apache License 2.0
 #
-# Isaac Lab 3 compatible copy of pace_sim2real.utils.PaceDCMotor (works on PhysX and Newton),
-# same as basic-locomotion-isaaclab/actuators/pace_actuator.py.
+# Isaac Lab 3 compatible copy of pace_sim2real.utils.PaceDCMotor v0.2.0 (works on PhysX and Newton), with only its
+# default delay on the commands. basic-locomotion-isaaclab/actuators/pace_actuator.py copies the previous version,
+# which delays the torque instead: a delay identified here must be used there with the commands delayed.
 
 from __future__ import annotations
 
@@ -23,8 +24,8 @@ class PaceDCMotor(DCMotor):
     frame by adding a per-joint encoder bias to the true joint positions. In other words,
     the controller operates on biased (encoder) positions rather than the true joint positions.
 
-    The torque command computed by the PD controller is applied after a configurable delay
-    (in simulation steps) to represent latency between command calculation and actuation.
+    A configurable delay (in simulation steps) represents the latency between command calculation and actuation:
+    the commanded targets reach the drive late, while the PD controller acts on the current measurements.
 
     The software implementation is inspired by DelayedPDActuator.
     """
@@ -43,18 +44,24 @@ class PaceDCMotor(DCMotor):
             cfg.encoder_bias, 0.0, self.joint_names, self._num_envs, self._device
         )
 
-        self.torques_delay_buffer = DelayBuffer(cfg.max_delay + 1, self._num_envs, device=self._device)
-        self.torques_delay_buffer.set_time_lag(cfg.max_delay, torch.arange(self._num_envs, device=self._device))
+        # one buffer per command signal
+        self.delay_buffers = {
+            name: DelayBuffer(cfg.max_delay + 1, self._num_envs, device=self._device)
+            for name in ("position", "velocity", "effort")
+        }
+        for buffer in self.delay_buffers.values():
+            buffer.set_time_lag(cfg.max_delay, torch.arange(self._num_envs, device=self._device))
 
     def reset(self, env_ids: Sequence[int]):
         super().reset(env_ids)
         # reset buffers
-        try:
-            self.torques_delay_buffer.reset(env_ids)
-        except RuntimeError:
-            # Isaac Lab 3.0: warp-backed CircularBuffer rejects indexed resets;
-            # fall back to a full reset (one-step delay transient for other envs)
-            self.torques_delay_buffer.reset(None)
+        for buffer in self.delay_buffers.values():
+            try:
+                buffer.reset(env_ids)
+            except RuntimeError:
+                # Isaac Lab 3.0: warp-backed CircularBuffer rejects indexed resets;
+                # fall back to a full reset (one-step delay transient for other envs)
+                buffer.reset(None)
 
     def update_encoder_bias(self, encoder_bias: torch.Tensor):
         self.encoder_bias = encoder_bias
@@ -62,15 +69,18 @@ class PaceDCMotor(DCMotor):
     def update_time_lags(self, delay: int | torch.Tensor, env_ids: Sequence[int] | None = None):
         if env_ids is None:
             env_ids = torch.arange(self._num_envs, device=self._device)
-        self.torques_delay_buffer.set_time_lag(delay, env_ids)
+        for buffer in self.delay_buffers.values():
+            buffer.set_time_lag(delay, env_ids)
 
     def compute(
         self, control_action: ArticulationActions, joint_pos: torch.Tensor, joint_vel: torch.Tensor
     ) -> ArticulationActions:
+        # delay the commanded targets (joint position, velocity and feed-forward effort)
+        control_action.joint_positions = self.delay_buffers["position"].compute(control_action.joint_positions)
+        control_action.joint_velocities = self.delay_buffers["velocity"].compute(control_action.joint_velocities)
+        control_action.joint_efforts = self.delay_buffers["effort"].compute(control_action.joint_efforts)
         # compute actuator model with encoder bias added to joint positions (joint position in encoder frame, not simulation frame)
-        control_action_sim = super().compute(control_action, joint_pos - self.encoder_bias, joint_vel)
-        control_action_sim.joint_efforts = self.torques_delay_buffer.compute(control_action_sim.joint_efforts)
-        return control_action_sim
+        return super().compute(control_action, joint_pos - self.encoder_bias, joint_vel)
 
 
 @configclass
