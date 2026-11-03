@@ -76,7 +76,7 @@ class Data_Collection_Node(Node):
     def __init__(self):
         super().__init__('Data_Collection_Node')
         # Subscribers and Publishers
-        self.subscription_blind_state = self.create_subscription(BlindState,"/blind_state_legged", self.get_blind_state_callback, 1)
+        self.subscription_blind_state = self.create_subscription(BlindState,"/blind_state", self.get_blind_state_callback, 1)
         self.publisher_control_signal = self.create_publisher(ControlSignal,"/control_signal_legged", 1)
         self.sequence_id = 0 # To keep track of the last msg sent, useful for debugging and synchronization
         self.timer = self.create_timer(1.0/CONTROL_FREQ, self.compute_control)
@@ -600,13 +600,14 @@ class Data_Collection_Node(Node):
                 action = tau.flatten()
                 self.mjData.ctrl = action
                 mujoco.mj_step(self.mjModel, self.mjData)
-
+        
 
         # Publish the desired joint positions to the control signal --------------------------------
         control_signal_msg = ControlSignal()
-        control_signal_msg.header.timestamp = int(self.get_clock().now().nanoseconds)
-        control_signal_msg.header.sequence_id = int(self.sequence_id % 1000)  # To avoid overflow, we reset the sequence id after it reaches a certain value
-        self.sequence_id += 1
+        #control_signal_msg.header.timestamp = int(self.get_clock().now().nanoseconds)
+        #control_signal_msg.header.sequence_id = int(self.sequence_id % 1000)  # To avoid overflow, we reset the sequence id after it reaches a certain value
+        #self.sequence_id += 1
+        control_signal_msg.control_mode = 1 
         control_signal_msg.joints_position = np.array([desired_joint_pos[0], desired_joint_pos[1], desired_joint_pos[2], desired_joint_pos[3]]).flatten().tolist()
         control_signal_msg.joints_velocity = np.zeros(12).tolist()
         control_signal_msg.joints_torques = np.zeros(12).tolist()
