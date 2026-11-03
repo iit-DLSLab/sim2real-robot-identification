@@ -1,4 +1,11 @@
-"""Excitation trajectories for joint-space system identification.
+"""Trajectories of the collection scripts for joint-space system identification.
+
+Every collection mode is a JointTrajectory, computed once before execution, checked by the operator with
+describe() and then sampled by elapsed time at every control step:
+  - setpoint: a random posture, held until it is reached (or a timeout) and then for a short static phase;
+  - falling: a random posture held for a while, then the gains go to zero and the legs fall (quadrupeds);
+  - chirp: back and forth between the sys_id_1 and sys_id_2 keyframes, with shrinking periods;
+  - excitation: per-joint chirps and a posture sweep inside the same joint box, described below.
 
 The "chirp" of the collection scripts moves every joint back and forth between the two keyframes sys_id_1 and
 sys_id_2, all joints in phase, with a period shrinking from 3 s to 0.2 s. Each limb therefore travels along a
@@ -33,8 +40,11 @@ run_collection_manipulator_ros2.py):
                                                  seed=12, speed_scale=0.5)
     print(trajectory.describe())
     ...
-    desired_joint_pos = trajectory.sample(time.time() - start_time)   # at every control step
-    done = time.time() - start_time > trajectory.duration
+    elapsed = time.time() - start_time                                # at every control step
+    desired_joint_pos = trajectory.sample(elapsed)
+    kp, kd = trajectory.gains(elapsed, kp, kd)
+    if trajectory.done(elapsed, joint_pos):
+        save(trajectory.name, trajectory.metadata)                    # dataset prefix and extra entries
 """
 
 from __future__ import annotations
@@ -51,6 +61,21 @@ RAMP_DURATION = 2.0  # [s], smooth transition from the start posture and back to
 # (a 0.2 s period covers the range in 0.1 s). With the low gains used for sys-id the robot follows less than that.
 VELOCITY_TIME_CONSTANT = 0.15  # [s]
 BOUND_MARGIN = 0.97  # use 97% of the half range around the center of the box
+
+# Chirp: periods of the back and forth cycles at full speed [s], as executed by the original collection scripts
+CHIRP_PERIODS = (3.0, 2.8, 2.6, 2.4, 2.2, 2.0, 1.8, 1.6, 1.4, 1.2, 1.0, 0.8, 0.6, 0.5, 0.4, 0.3)
+DEFAULT_CHIRP_SPEED_SCALE = 1.0
+
+# Setpoint: hold the posture until every group of joints (e.g. a leg) is within the tolerance, or until the
+# timeout, then record a static phase
+SETPOINT_REACH_TOLERANCE = 0.1  # [rad], norm of the error of a group of joints
+SETPOINT_REACH_TIMEOUT = 2.0  # [s]
+SETPOINT_STATIC_DURATION = 0.5  # [s]
+
+# Falling: hold the posture, then zero gains (free fall) until the end
+FALLING_DURATION = 2.5  # [s]
+FALLING_HOLD_TIMES = (2.0, 0.2)  # [s], the first with probability 1/4, the second otherwise
+FALLING_TARGET = 20.0  # [rad], target sent with zero gains during the fall
 
 
 def generate_excitation(lower, upper, duration=DEFAULT_DURATION, frequency=200.0, max_velocity=None,
@@ -127,6 +152,33 @@ def generate_excitation(lower, upper, duration=DEFAULT_DURATION, frequency=200.0
     return positions
 
 
+def generate_chirp(setpoint_1, setpoint_2, frequency=200.0, speed_scale=DEFAULT_CHIRP_SPEED_SCALE):
+    """Chirp between two postures, one column per joint.
+
+    Every cycle goes linearly from setpoint_1 to setpoint_2 and back, at constant velocity, with the periods of
+    CHIRP_PERIODS: all joints in phase, each at its own velocity. The trajectory starts and ends at setpoint_1.
+
+    Args:
+        setpoint_1, setpoint_2: postures, shape (k,).
+        frequency: sampling frequency [Hz], normally the control frequency of the collection.
+        speed_scale: time scaling in (0, 1]. Every period is divided by it, so the velocities scale with it.
+
+    Returns:
+        Joint positions, shape (n, k).
+    """
+    if not 0.0 < speed_scale <= 1.0:
+        raise ValueError(f"speed_scale must be in (0, 1], got {speed_scale}.")
+    setpoint_1, setpoint_2 = np.asarray(setpoint_1, dtype=float), np.asarray(setpoint_2, dtype=float)
+    cycles = []
+    for period in CHIRP_PERIODS:
+        period /= speed_scale
+        t = np.arange(int(round(period * frequency))) / frequency
+        triangle = 1.0 - np.abs(2.0 * t / period - 1.0)  # 0 -> 1 -> 0 over the period
+        cycles.append(setpoint_1 + triangle[:, None] * (setpoint_2 - setpoint_1))
+    cycles.append(setpoint_1[None])
+    return np.concatenate(cycles)
+
+
 def add_start_end_ramps(positions, start, frequency, ramp_duration=RAMP_DURATION):
     """Blend smoothly from the start posture into the trajectory, and back to it at the end.
 
@@ -166,14 +218,23 @@ def mirror_leg_to_quadruped(leg_positions, mirror_right_hips=True):
     return positions
 
 
-class ExcitationTrajectory:
-    """Precomputed joint trajectory, sampled by elapsed time with linear interpolation between samples."""
+class JointTrajectory:
+    """Precomputed joint trajectory, sampled by elapsed time with linear interpolation between samples.
 
-    def __init__(self, positions, frequency, seed, speed_scale=1.0):
-        self.positions = np.asarray(positions, dtype=float)
+    Args:
+        positions: joint positions, shape (n, k), sampled at frequency.
+        frequency: sampling frequency [Hz].
+        name: kind of trajectory, also the prefix of the saved dataset (e.g. "excitation").
+        metadata: extra entries saved with the dataset (e.g. the seed).
+        label: name shown to the operator, by default the name.
+    """
+
+    def __init__(self, positions, frequency, name, metadata=None, label=None):
+        self.positions = np.atleast_2d(np.asarray(positions, dtype=float))
         self.frequency = float(frequency)
-        self.seed = seed
-        self.speed_scale = speed_scale
+        self.name = name
+        self.metadata = dict(metadata or {})
+        self.label = label or name
 
     @property
     def duration(self):
@@ -188,18 +249,138 @@ class ExcitationTrajectory:
         alpha = x - i
         return (1.0 - alpha) * self.positions[i] + alpha * self.positions[i_next]
 
+    def gains(self, elapsed_time, kp, kd):
+        """PD gains at elapsed_time [s]: the nominal ones, unless the trajectory changes them."""
+        return kp, kd
+
+    def done(self, elapsed_time, joint_pos):
+        """Whether the collection is complete, given the measured joint positions (flattened)."""
+        return elapsed_time > self.duration
+
     def describe(self, joint_names=None):
         """Summary to check before executing: duration, range and peak velocity of the reference of every joint."""
         names = joint_names or [f"joint_{j}" for j in range(self.positions.shape[1])]
-        velocity = np.abs(np.diff(self.positions, axis=0)).max(axis=0) * self.frequency
+        velocity = np.abs(np.diff(self.positions, axis=0)).max(axis=0, initial=0.0) * self.frequency
+        details = "".join(f", {key} {value}" for key, value in self.metadata.items())
         lines = [
-            f"Excitation trajectory: seed {self.seed}, speed scale {self.speed_scale}, "
-            f"{self.duration:.1f} s at {self.frequency:.0f} Hz",
+            f"{self.label.capitalize()} trajectory{details}, {self.duration:.1f} s at {self.frequency:.0f} Hz",
             f"{'joint':<20}{'min [rad]':>11}{'max [rad]':>11}{'max ref vel [rad/s]':>21}",
         ]
         for name, low, high, vel in zip(names, self.positions.min(axis=0), self.positions.max(axis=0), velocity):
             lines.append(f"{name:<20}{low:>11.3f}{high:>11.3f}{vel:>21.2f}")
         return "\n".join(lines)
+
+
+class SetpointTrajectory(JointTrajectory):
+    """Hold a posture until every group of joints reaches it (or a timeout), then for a static phase.
+
+    Args:
+        target: posture, shape (k,).
+        frequency: control frequency [Hz].
+        num_groups: the k joints are split in num_groups equal groups (e.g. 4 legs), each reached when the norm
+            of its error is below SETPOINT_REACH_TOLERANCE.
+    """
+
+    def __init__(self, target, frequency, num_groups=1):
+        super().__init__(np.asarray(target, dtype=float)[None], frequency, "setpoint")
+        self.num_groups = num_groups
+        self.reached_time = None
+
+    @property
+    def target(self):
+        return self.positions[0]
+
+    def done(self, elapsed_time, joint_pos):
+        if self.reached_time is None:
+            error = (self.target - np.asarray(joint_pos, dtype=float)).reshape(self.num_groups, -1)
+            target_reached = bool(np.all(np.linalg.norm(error, axis=1) < SETPOINT_REACH_TOLERANCE))
+            if target_reached or elapsed_time > SETPOINT_REACH_TIMEOUT:
+                self.reached_time = elapsed_time
+                reason = "target reached" if target_reached else "reach timeout"
+                print(f"Setpoint {reason}; recording {SETPOINT_STATIC_DURATION:.1f} s of static data.")
+        return self.reached_time is not None and elapsed_time - self.reached_time >= SETPOINT_STATIC_DURATION
+
+    def describe(self, joint_names=None):
+        names = joint_names or [f"joint_{j}" for j in range(self.target.size)]
+        lines = ["Setpoint (joint positions [rad]):"]
+        lines += [f"{name:<20}{value:>11.3f}" for name, value in zip(names, self.target)]
+        return "\n".join(lines)
+
+
+class FallingTrajectory(JointTrajectory):
+    """Hold a posture for hold_time, then free fall with zero gains until FALLING_DURATION."""
+
+    def __init__(self, target, frequency, hold_time):
+        super().__init__(np.asarray(target, dtype=float)[None], frequency, "falling", {"falling_hold_time": hold_time})
+        self.hold_time = hold_time
+
+    @property
+    def duration(self):
+        return FALLING_DURATION
+
+    def sample(self, elapsed_time):
+        if elapsed_time > self.hold_time:
+            return np.full_like(self.positions[0], FALLING_TARGET)
+        return self.positions[0].copy()
+
+    def gains(self, elapsed_time, kp, kd):
+        if elapsed_time > self.hold_time:
+            return kp * 0.0, kd * 0.0
+        return kp, kd
+
+
+def random_quadruped_setpoint(rng=None):
+    """Random posture of the 12 joints (FL, FR, RL, RR), with the hips of the right legs mirrored."""
+    rng = np.random.default_rng() if rng is None else rng
+    hip = rng.uniform(-0.0, 0.5)
+    thigh = rng.uniform(-1.0, 0.5)
+    calf = rng.uniform(-0.0, 1.5)
+    leg = np.array([0.0 + hip, 1.21 + thigh, -2.794 + calf])
+    return mirror_leg_to_quadruped(leg[None], mirror_right_hips=True)[0]
+
+
+def quadruped_setpoint_trajectory(frequency, rng=None):
+    """Random setpoint of a quadruped, reached when every leg is within the tolerance."""
+    return SetpointTrajectory(random_quadruped_setpoint(rng), frequency, num_groups=4)
+
+
+def quadruped_falling_trajectory(frequency, rng=None):
+    """Random setpoint of a quadruped, then free fall. The hold time is drawn once per collection."""
+    rng = np.random.default_rng() if rng is None else rng
+    hold_time = FALLING_HOLD_TIMES[0] if rng.integers(0, 4) == 0 else FALLING_HOLD_TIMES[1]
+    return FallingTrajectory(random_quadruped_setpoint(rng), frequency, hold_time)
+
+
+def manipulator_setpoint_trajectory(setpoint_1, setpoint_2, frequency, rng=None):
+    """Random setpoint of a manipulator inside the joint box of the chirp."""
+    rng = np.random.default_rng() if rng is None else rng
+    target = rng.uniform(np.minimum(setpoint_1, setpoint_2), np.maximum(setpoint_1, setpoint_2))
+    return SetpointTrajectory(target, frequency, num_groups=1)
+
+
+def quadruped_chirp_trajectory(leg_setpoint_1, leg_setpoint_2, frequency, speed_scale=DEFAULT_CHIRP_SPEED_SCALE,
+                               mirror_right_hips=True):
+    """Chirp of a fixed-base quadruped between the sys_id_1 and sys_id_2 keyframes, on the four legs.
+
+    Args:
+        leg_setpoint_1, leg_setpoint_2: hip, thigh, calf of the sys_id_1 and sys_id_2 keyframes (front-left leg).
+        frequency: control frequency [Hz].
+        speed_scale: time scaling in (0, 1], see generate_chirp.
+        mirror_right_hips: mirror the hip of the right legs (False for pegasus).
+    """
+    leg = generate_chirp(leg_setpoint_1, leg_setpoint_2, frequency, speed_scale)
+    positions = mirror_leg_to_quadruped(leg, mirror_right_hips)
+    return JointTrajectory(positions, frequency, "trajectory", {"chirp_speed_scale": speed_scale}, label="chirp")
+
+
+def manipulator_chirp_trajectory(setpoint_1, setpoint_2, frequency, speed_scale=DEFAULT_CHIRP_SPEED_SCALE):
+    """Chirp of a manipulator between the sys_id_1 and sys_id_2 keyframes (without the gripper)."""
+    positions = generate_chirp(setpoint_1, setpoint_2, frequency, speed_scale)
+    return JointTrajectory(positions, frequency, "trajectory", {"chirp_speed_scale": speed_scale}, label="chirp")
+
+
+def _excitation_metadata(seed, speed_scale):
+    return {"excitation_seed": seed, "excitation_speed_scale": speed_scale}
 
 
 def quadruped_excitation_trajectory(leg_setpoint_1, leg_setpoint_2, start, frequency, seed=DEFAULT_SEED,
@@ -220,7 +401,8 @@ def quadruped_excitation_trajectory(leg_setpoint_1, leg_setpoint_2, start, frequ
     upper = np.maximum(leg_setpoint_1, leg_setpoint_2)
     leg = generate_excitation(lower, upper, duration=duration, frequency=frequency, seed=seed, speed_scale=speed_scale)
     positions = mirror_leg_to_quadruped(leg, mirror_right_hips)
-    return ExcitationTrajectory(add_start_end_ramps(positions, start, frequency), frequency, seed, speed_scale)
+    return JointTrajectory(add_start_end_ramps(positions, start, frequency), frequency, "excitation",
+                           _excitation_metadata(seed, speed_scale))
 
 
 def manipulator_excitation_trajectory(setpoint_1, setpoint_2, start, frequency, seed=DEFAULT_SEED,
@@ -239,4 +421,5 @@ def manipulator_excitation_trajectory(setpoint_1, setpoint_2, start, frequency, 
     upper = np.maximum(setpoint_1, setpoint_2)
     positions = generate_excitation(lower, upper, duration=duration, frequency=frequency, seed=seed,
                                     speed_scale=speed_scale)
-    return ExcitationTrajectory(add_start_end_ramps(positions, start, frequency), frequency, seed, speed_scale)
+    return JointTrajectory(add_start_end_ramps(positions, start, frequency), frequency, "excitation",
+                           _excitation_metadata(seed, speed_scale))

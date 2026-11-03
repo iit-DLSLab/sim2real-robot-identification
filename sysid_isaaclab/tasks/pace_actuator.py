@@ -3,8 +3,7 @@
 # Licensed under the Apache License 2.0
 #
 # Isaac Lab 3 compatible copy of pace_sim2real.utils.PaceDCMotor v0.2.0 (works on PhysX and Newton), with only its
-# default delay on the commands. basic-locomotion-isaaclab/actuators/pace_actuator.py copies the previous version,
-# which delays the torque instead: a delay identified here must be used there with the commands delayed.
+# default delay on the commands. 
 
 from __future__ import annotations
 

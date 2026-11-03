@@ -22,8 +22,8 @@ PEGASUS_HIP_ACTUATOR_CFG = PaceDCMotorCfg(
     saturation_effort=120.0,
     effort_limit=120.0,
     velocity_limit=10.47,
-    stiffness={".*": 200.0},  # P gain in Nm/rad
-    damping={".*": 10.0},  # D gain in Nm s/rad
+    stiffness={".*": 120.0},  # P gain in Nm/rad
+    damping={".*": 6.0},  # D gain in Nm s/rad
     encoder_bias={".*": 0.0},  # encoder bias in radians
     # note: modeling coulomb friction if friction = dynamic_friction
     # > in newer Isaac Sim versions, friction is renamed to static_friction
@@ -38,8 +38,8 @@ PEGASUS_THIGH_ACTUATOR_CFG = PaceDCMotorCfg(
     saturation_effort=120.0,
     effort_limit=120.0,
     velocity_limit=10.47,
-    stiffness={".*": 200.0},  # P gain in Nm/rad
-    damping={".*": 10.0},  # D gain in Nm s/rad
+    stiffness={".*": 120.0},  # P gain in Nm/rad
+    damping={".*": 6.0},  # D gain in Nm s/rad
     encoder_bias={".*": 0.0},  # encoder bias in radians
     # note: modeling coulomb friction if friction = dynamic_friction
     # > in newer Isaac Sim versions, friction is renamed to static_friction
@@ -54,8 +54,8 @@ PEGASUS_CALF_ACTUATOR_CFG = PaceDCMotorCfg(
     saturation_effort=210.0,
     effort_limit=210.0,
     velocity_limit=5.18,
-    stiffness={".*": 200.0},  # P gain in Nm/rad
-    damping={".*": 10.0},  # D gain in Nm s/rad
+    stiffness={".*": 120.0},  # P gain in Nm/rad
+    damping={".*": 6.0},  # D gain in Nm s/rad
     encoder_bias={".*": 0.0},  # encoder bias in radians
     # note: modeling coulomb friction if friction = dynamic_friction
     # > in newer Isaac Sim versions, friction is renamed to static_friction
@@ -103,7 +103,7 @@ PEGASUS_CFG = ArticulationCfg(
 class PegasusPaceCfg(PaceCfg):
     """Pace configuration for Pegasus robot."""
     robot_name: str = "pegasus_sim"
-    data_dir: str = f"{ISAAC_ASSET_DIR}/../../datasets/pegasus/trajectory_1.pt"  # located in pace_sim2real/data/pegasus_sim/chirp_data.pt
+    data_dir: str = f"{ISAAC_ASSET_DIR}/../../datasets/pegasus"  # every .pt inside is fitted, as in the MuJoCo fit
     bounds_params: torch.Tensor = torch.zeros((49, 2))  # 12 + 12 + 12 + 12 + 1 = 49 parameters to optimize
     joint_order: list[str] = [
         "FL_hip_joint",
@@ -122,10 +122,12 @@ class PegasusPaceCfg(PaceCfg):
 
     def __post_init__(self):
         # set bounds for parameters
-        self.bounds_params[:12, 0] = 1e-5
-        self.bounds_params[:12, 1] = 1.0  # armature between 1e-5 - 1.0 [kgm2]
+        # armature fixed to the pegasus.xml values (hip, thigh, calf per leg) [kgm2]
+        armature = torch.tensor([0.33, 0.33, 1.0692] * 4)
+        self.bounds_params[:12, 0] = armature
+        self.bounds_params[:12, 1] = armature
         self.bounds_params[12:24, 1] = 7.0  # dof_damping between 0.0 - 7.0 [Nm s/rad]
-        self.bounds_params[24:36, 1] = 1.0  # friction between 0.0 - 1.0
+        self.bounds_params[24:36, 1] = 7.0  # friction between 0.0 - 7.0
         self.bounds_params[36:48, 0] = -0.0
         self.bounds_params[36:48, 1] = 0.0  # bias between -0.1 - 0.1 [rad]
         self.bounds_params[48, 1] = 5.0  # delay between 0.0 - 5.0 [sim steps]

@@ -7,17 +7,13 @@ import copy
 
 import mujoco
 
-from excitation_trajectory import DEFAULT_SEED, DEFAULT_SPEED_SCALE
+from collection_trajectories import DEFAULT_SEED, DEFAULT_SPEED_SCALE, DEFAULT_CHIRP_SPEED_SCALE
 
 class Console():
     def __init__(self, controller_node):
         self.controller_node = controller_node
 
         self.isDown = True
-        self.setpoint_collection = False
-        self.falling_collection = False
-        self.trajectory_collection = False
-        self.trajectory_type = "chirp"  # "chirp" or "excitation" (see excitation_trajectory.py)
         self.isActivated = False
 
         # Autocomplete setup
@@ -45,60 +41,44 @@ class Console():
                     
                 if(input_string == "startCollection"):
 
-                    mode = input("Select the collection mode (setpoint/falling/trajectory): ")
-                    if(mode == "setpoint"):
-                        self.controller_node.prepare_calibration_setpoint()
-                        confirmation = input("Execute this setpoint? [y/N]: ").strip().lower()
-                        if confirmation not in ("y", "yes"):
-                            self.controller_node.reject_calibration_setpoint()
-                            self.setpoint_collection = False
-                            self.falling_collection = False
-                            self.trajectory_collection = False
-                            print("Setpoint rejected. No motion will be executed.")
-                            self.isActivated = False
-                            continue
-
-                        self.setpoint_collection = True
-                        self.falling_collection = False
-                        self.trajectory_collection = False
-                        self.controller_node.accept_calibration_setpoint()
-                        print("Setpoint collection mode activated")
-                    elif(mode == "falling"):
-                        self.setpoint_collection = False
-                        self.falling_collection = True
-                        self.trajectory_collection = False
-                        print("Falling collection mode activated")
-                    elif(mode == "trajectory"):
-                        trajectory_type = input("Select the trajectory type (chirp/excitation) [chirp]: ").strip().lower() or "chirp"
-                        if(trajectory_type == "excitation"):
-                            # Per-joint chirps + posture sweep, generated once and checked before execution
+                    mode = input("Select the collection mode (setpoint/falling/trajectory): ").strip().lower()
+                    # Every mode is a trajectory of collection_trajectories.py, generated before execution
+                    options = {}
+                    if(mode == "trajectory"):
+                        kind = input("Select the trajectory type (chirp/excitation) [chirp]: ").strip().lower() or "chirp"
+                        if(kind == "excitation"):
+                            # Per-joint chirps + posture sweep
                             seed_text = input(f"Excitation seed [{DEFAULT_SEED}] (use another seed for a validation trajectory): ").strip()
-                            seed = int(seed_text) if seed_text else DEFAULT_SEED
+                            options["seed"] = int(seed_text) if seed_text else DEFAULT_SEED
                             speed_text = input(f"Speed scale in (0, 1] [{DEFAULT_SPEED_SCALE}] (1 = full speed): ").strip()
-                            speed_scale = float(speed_text) if speed_text else DEFAULT_SPEED_SCALE
-                            self.controller_node.prepare_excitation_trajectory(seed, speed_scale)
-                            confirmation = input("Execute this excitation trajectory? [y/N]: ").strip().lower()
-                            if confirmation not in ("y", "yes"):
-                                self.controller_node.reject_excitation_trajectory()
-                                print("Excitation trajectory rejected. No motion will be executed.")
-                                self.isActivated = False
-                                continue
-                            self.controller_node.accept_excitation_trajectory()
-                        elif(trajectory_type != "chirp"):
+                            options["speed_scale"] = float(speed_text) if speed_text else DEFAULT_SPEED_SCALE
+                        elif(kind == "chirp"):
+                            # Every period of the chirp is divided by the speed scale (1 = original chirp)
+                            speed_text = input(f"Chirp speed scale in (0, 1] [{DEFAULT_CHIRP_SPEED_SCALE}] (1 = original chirp): ").strip()
+                            options["speed_scale"] = float(speed_text) if speed_text else DEFAULT_CHIRP_SPEED_SCALE
+                        else:
                             print("Invalid trajectory type selected")
                             self.isActivated = False
                             continue
-
-                        self.trajectory_type = trajectory_type
-                        self.setpoint_collection = False
-                        self.falling_collection = False
-                        self.trajectory_collection = True
-                        print(f"Trajectory collection mode activated ({trajectory_type})")
+                    elif(mode in ("setpoint", "falling")):
+                        kind = mode
                     else:
                         print("Invalid mode selected")
                         self.isActivated = False
                         continue
-                    
+
+                    self.controller_node.prepare_trajectory(kind, **options)
+                    # Falling repeats by itself until the node is stopped: no confirmation, as before
+                    if(kind != "falling"):
+                        confirmation = input(f"Execute this {kind}? [y/N]: ").strip().lower()
+                        if confirmation not in ("y", "yes"):
+                            self.controller_node.cancel_trajectory()
+                            print(f"{kind.capitalize()} rejected. No motion will be executed.")
+                            self.isActivated = False
+                            continue
+
+                    self.controller_node.start_trajectory()
+                    print(f"{kind.capitalize()} collection activated")
                     self.isActivated = True
 
                 elif(input_string == "help"):
