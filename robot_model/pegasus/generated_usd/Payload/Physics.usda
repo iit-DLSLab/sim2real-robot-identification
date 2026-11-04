@@ -26,90 +26,90 @@ def Xform "pegasus_description"
         {
             uniform double mjc:ctrlRange:max = 120
             uniform double mjc:ctrlRange:min = -120
-            rel mjc:target = </pegasus_description/Geometry/torso/FL_hip/FL_hip_joint>
+            rel mjc:target = </pegasus_description/Geometry/base/FL_hip/FL_hip_joint>
         }
 
         def MjcActuator "FL_thigh"
         {
             uniform double mjc:ctrlRange:max = 120
             uniform double mjc:ctrlRange:min = -120
-            rel mjc:target = </pegasus_description/Geometry/torso/FL_hip/FL_thigh/FL_thigh_joint>
+            rel mjc:target = </pegasus_description/Geometry/base/FL_hip/FL_thigh/FL_thigh_joint>
         }
 
         def MjcActuator "FL_calf"
         {
             uniform double mjc:ctrlRange:max = 210
             uniform double mjc:ctrlRange:min = -210
-            rel mjc:target = </pegasus_description/Geometry/torso/FL_hip/FL_thigh/FL_calf/FL_calf_joint>
+            rel mjc:target = </pegasus_description/Geometry/base/FL_hip/FL_thigh/FL_calf/FL_calf_joint>
         }
 
         def MjcActuator "FR_hip"
         {
             uniform double mjc:ctrlRange:max = 120
             uniform double mjc:ctrlRange:min = -120
-            rel mjc:target = </pegasus_description/Geometry/torso/FR_hip/FR_hip_joint>
+            rel mjc:target = </pegasus_description/Geometry/base/FR_hip/FR_hip_joint>
         }
 
         def MjcActuator "FR_thigh"
         {
             uniform double mjc:ctrlRange:max = 120
             uniform double mjc:ctrlRange:min = -120
-            rel mjc:target = </pegasus_description/Geometry/torso/FR_hip/FR_thigh/FR_thigh_joint>
+            rel mjc:target = </pegasus_description/Geometry/base/FR_hip/FR_thigh/FR_thigh_joint>
         }
 
         def MjcActuator "FR_calf"
         {
             uniform double mjc:ctrlRange:max = 210
             uniform double mjc:ctrlRange:min = -210
-            rel mjc:target = </pegasus_description/Geometry/torso/FR_hip/FR_thigh/FR_calf/FR_calf_joint>
+            rel mjc:target = </pegasus_description/Geometry/base/FR_hip/FR_thigh/FR_calf/FR_calf_joint>
         }
 
         def MjcActuator "RL_hip"
         {
             uniform double mjc:ctrlRange:max = 120
             uniform double mjc:ctrlRange:min = -120
-            rel mjc:target = </pegasus_description/Geometry/torso/RL_hip/RL_hip_joint>
+            rel mjc:target = </pegasus_description/Geometry/base/RL_hip/RL_hip_joint>
         }
 
         def MjcActuator "RL_thigh"
         {
             uniform double mjc:ctrlRange:max = 120
             uniform double mjc:ctrlRange:min = -120
-            rel mjc:target = </pegasus_description/Geometry/torso/RL_hip/RL_thigh/RL_thigh_joint>
+            rel mjc:target = </pegasus_description/Geometry/base/RL_hip/RL_thigh/RL_thigh_joint>
         }
 
         def MjcActuator "RL_calf"
         {
             uniform double mjc:ctrlRange:max = 210
             uniform double mjc:ctrlRange:min = -210
-            rel mjc:target = </pegasus_description/Geometry/torso/RL_hip/RL_thigh/RL_calf/RL_calf_joint>
+            rel mjc:target = </pegasus_description/Geometry/base/RL_hip/RL_thigh/RL_calf/RL_calf_joint>
         }
 
         def MjcActuator "RR_hip"
         {
             uniform double mjc:ctrlRange:max = 120
             uniform double mjc:ctrlRange:min = -120
-            rel mjc:target = </pegasus_description/Geometry/torso/RR_hip/RR_hip_joint>
+            rel mjc:target = </pegasus_description/Geometry/base/RR_hip/RR_hip_joint>
         }
 
         def MjcActuator "RR_thigh"
         {
             uniform double mjc:ctrlRange:max = 120
             uniform double mjc:ctrlRange:min = -120
-            rel mjc:target = </pegasus_description/Geometry/torso/RR_hip/RR_thigh/RR_thigh_joint>
+            rel mjc:target = </pegasus_description/Geometry/base/RR_hip/RR_thigh/RR_thigh_joint>
         }
 
         def MjcActuator "RR_calf"
         {
             uniform double mjc:ctrlRange:max = 210
             uniform double mjc:ctrlRange:min = -210
-            rel mjc:target = </pegasus_description/Geometry/torso/RR_hip/RR_thigh/RR_calf/RR_calf_joint>
+            rel mjc:target = </pegasus_description/Geometry/base/RR_hip/RR_thigh/RR_calf/RR_calf_joint>
         }
     }
 
     def "Geometry"
     {
-        def "torso" (
+        def "base" (
             prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI", "PhysicsArticulationRootAPI", "NewtonArticulationRootAPI"]
         )
         {
@@ -205,8 +205,8 @@ def Xform "pegasus_description"
 
                 def PhysicsFixedJoint "PhysicsFixedJoint"
                 {
-                    rel physics:body0 = </pegasus_description/Geometry/torso>
-                    rel physics:body1 = </pegasus_description/Geometry/torso/head_tail>
+                    rel physics:body0 = </pegasus_description/Geometry/base>
+                    rel physics:body1 = </pegasus_description/Geometry/base/head_tail>
                     point3f physics:localPos0 = (0, 0, 0)
                     point3f physics:localPos1 = (0, 0, 0)
                     quatf physics:localRot0 = (1, 0, 0, 0)
@@ -225,8 +225,8 @@ def Xform "pegasus_description"
 
                 def PhysicsFixedJoint "PhysicsFixedJoint"
                 {
-                    rel physics:body0 = </pegasus_description/Geometry/torso>
-                    rel physics:body1 = </pegasus_description/Geometry/torso/battery>
+                    rel physics:body0 = </pegasus_description/Geometry/base>
+                    rel physics:body1 = </pegasus_description/Geometry/base/battery>
                     point3f physics:localPos0 = (0, 0, 0)
                     point3f physics:localPos1 = (0, 0, 0)
                     quatf physics:localRot0 = (1, 0, 0, 0)
@@ -271,8 +271,8 @@ def Xform "pegasus_description"
                     uniform double mjc:damping = 0.001
                     uniform double mjc:frictionloss = 2.6226
                     uniform token physics:axis = "Z"
-                    rel physics:body0 = </pegasus_description/Geometry/torso>
-                    rel physics:body1 = </pegasus_description/Geometry/torso/FL_hip>
+                    rel physics:body0 = </pegasus_description/Geometry/base>
+                    rel physics:body1 = </pegasus_description/Geometry/base/FL_hip>
                     point3f physics:localPos0 = (0.334, 0.163, 0)
                     point3f physics:localPos1 = (0, 0, 0)
                     quatf physics:localRot0 = (0.7071068, 0, 0.7071067, 0)
@@ -318,8 +318,8 @@ def Xform "pegasus_description"
                         uniform double mjc:damping = 0.1958
                         uniform double mjc:frictionloss = 2.5035
                         uniform token physics:axis = "Z"
-                        rel physics:body0 = </pegasus_description/Geometry/torso/FL_hip>
-                        rel physics:body1 = </pegasus_description/Geometry/torso/FL_hip/FL_thigh>
+                        rel physics:body0 = </pegasus_description/Geometry/base/FL_hip>
+                        rel physics:body1 = </pegasus_description/Geometry/base/FL_hip/FL_thigh>
                         point3f physics:localPos0 = (0, -0.0095, 0.1045)
                         point3f physics:localPos1 = (0, 0, 0)
                         quatf physics:localRot0 = (0.7071068, -0.7071067, 5.551115e-17, 1.110223e-16)
@@ -376,8 +376,8 @@ def Xform "pegasus_description"
                             uniform double mjc:damping = 0.5439
                             uniform double mjc:frictionloss = 4.9329
                             uniform token physics:axis = "Z"
-                            rel physics:body0 = </pegasus_description/Geometry/torso/FL_hip/FL_thigh>
-                            rel physics:body1 = </pegasus_description/Geometry/torso/FL_hip/FL_thigh/FL_calf>
+                            rel physics:body0 = </pegasus_description/Geometry/base/FL_hip/FL_thigh>
+                            rel physics:body1 = </pegasus_description/Geometry/base/FL_hip/FL_thigh/FL_calf>
                             point3f physics:localPos0 = (0.418, -5.551115e-17, 0.139854)
                             point3f physics:localPos1 = (0, 0, 0)
                             quatf physics:localRot0 = (1, 0, 0, 0)
@@ -407,8 +407,8 @@ def Xform "pegasus_description"
 
                             def PhysicsFixedJoint "PhysicsFixedJoint"
                             {
-                                rel physics:body0 = </pegasus_description/Geometry/torso/FL_hip/FL_thigh/FL_calf>
-                                rel physics:body1 = </pegasus_description/Geometry/torso/FL_hip/FL_thigh/FL_calf/FL_foot>
+                                rel physics:body0 = </pegasus_description/Geometry/base/FL_hip/FL_thigh/FL_calf>
+                                rel physics:body1 = </pegasus_description/Geometry/base/FL_hip/FL_thigh/FL_calf/FL_foot>
                                 point3f physics:localPos0 = (0.427146, 0, -5.551115e-17)
                                 point3f physics:localPos1 = (0, 0, 0)
                                 quatf physics:localRot0 = (1, 0, 0, 0)
@@ -456,8 +456,8 @@ def Xform "pegasus_description"
                     uniform double mjc:damping = 0.2111
                     uniform double mjc:frictionloss = 2.0482
                     uniform token physics:axis = "Z"
-                    rel physics:body0 = </pegasus_description/Geometry/torso>
-                    rel physics:body1 = </pegasus_description/Geometry/torso/FR_hip>
+                    rel physics:body0 = </pegasus_description/Geometry/base>
+                    rel physics:body1 = </pegasus_description/Geometry/base/FR_hip>
                     point3f physics:localPos0 = (0.334, -0.163, 0)
                     point3f physics:localPos1 = (0, 0, 0)
                     quatf physics:localRot0 = (0, -0.7071068, 0, 0.7071067)
@@ -503,8 +503,8 @@ def Xform "pegasus_description"
                         uniform double mjc:damping = 0.001
                         uniform double mjc:frictionloss = 3.8363
                         uniform token physics:axis = "Z"
-                        rel physics:body0 = </pegasus_description/Geometry/torso/FR_hip>
-                        rel physics:body1 = </pegasus_description/Geometry/torso/FR_hip/FR_thigh>
+                        rel physics:body0 = </pegasus_description/Geometry/base/FR_hip>
+                        rel physics:body1 = </pegasus_description/Geometry/base/FR_hip/FR_thigh>
                         point3f physics:localPos0 = (0, 0.0095, 0.1045)
                         point3f physics:localPos1 = (0, 0, 0)
                         quatf physics:localRot0 = (0.7071068, -0.7071067, 5.551115e-17, 1.110223e-16)
@@ -561,8 +561,8 @@ def Xform "pegasus_description"
                             uniform double mjc:damping = 0.7097
                             uniform double mjc:frictionloss = 5.7311
                             uniform token physics:axis = "Z"
-                            rel physics:body0 = </pegasus_description/Geometry/torso/FR_hip/FR_thigh>
-                            rel physics:body1 = </pegasus_description/Geometry/torso/FR_hip/FR_thigh/FR_calf>
+                            rel physics:body0 = </pegasus_description/Geometry/base/FR_hip/FR_thigh>
+                            rel physics:body1 = </pegasus_description/Geometry/base/FR_hip/FR_thigh/FR_calf>
                             point3f physics:localPos0 = (0.418, 0, -0.139854)
                             point3f physics:localPos1 = (0, 0, 0)
                             quatf physics:localRot0 = (1, 0, 0, 0)
@@ -592,8 +592,8 @@ def Xform "pegasus_description"
 
                             def PhysicsFixedJoint "PhysicsFixedJoint"
                             {
-                                rel physics:body0 = </pegasus_description/Geometry/torso/FR_hip/FR_thigh/FR_calf>
-                                rel physics:body1 = </pegasus_description/Geometry/torso/FR_hip/FR_thigh/FR_calf/FR_foot>
+                                rel physics:body0 = </pegasus_description/Geometry/base/FR_hip/FR_thigh/FR_calf>
+                                rel physics:body1 = </pegasus_description/Geometry/base/FR_hip/FR_thigh/FR_calf/FR_foot>
                                 point3f physics:localPos0 = (0.427146, 0, 0)
                                 point3f physics:localPos1 = (0, 0, 0)
                                 quatf physics:localRot0 = (1, 0, 0, 0)
@@ -641,8 +641,8 @@ def Xform "pegasus_description"
                     uniform double mjc:damping = 0.234
                     uniform double mjc:frictionloss = 2.0712
                     uniform token physics:axis = "Z"
-                    rel physics:body0 = </pegasus_description/Geometry/torso>
-                    rel physics:body1 = </pegasus_description/Geometry/torso/RL_hip>
+                    rel physics:body0 = </pegasus_description/Geometry/base>
+                    rel physics:body1 = </pegasus_description/Geometry/base/RL_hip>
                     point3f physics:localPos0 = (-0.334, 0.163, 0)
                     point3f physics:localPos1 = (0, 0, 0)
                     quatf physics:localRot0 = (0.7071068, 0, 0.7071067, 0)
@@ -688,8 +688,8 @@ def Xform "pegasus_description"
                         uniform double mjc:damping = 0.2563
                         uniform double mjc:frictionloss = 2.4914
                         uniform token physics:axis = "Z"
-                        rel physics:body0 = </pegasus_description/Geometry/torso/RL_hip>
-                        rel physics:body1 = </pegasus_description/Geometry/torso/RL_hip/RL_thigh>
+                        rel physics:body0 = </pegasus_description/Geometry/base/RL_hip>
+                        rel physics:body1 = </pegasus_description/Geometry/base/RL_hip/RL_thigh>
                         point3f physics:localPos0 = (2.220446e-16, -0.0095, -0.1045)
                         point3f physics:localPos1 = (0, 0, 0)
                         quatf physics:localRot0 = (0.7071068, -0.7071067, 5.551115e-17, 1.110223e-16)
@@ -746,8 +746,8 @@ def Xform "pegasus_description"
                             uniform double mjc:damping = 1.3333
                             uniform double mjc:frictionloss = 4.1006
                             uniform token physics:axis = "Z"
-                            rel physics:body0 = </pegasus_description/Geometry/torso/RL_hip/RL_thigh>
-                            rel physics:body1 = </pegasus_description/Geometry/torso/RL_hip/RL_thigh/RL_calf>
+                            rel physics:body0 = </pegasus_description/Geometry/base/RL_hip/RL_thigh>
+                            rel physics:body1 = </pegasus_description/Geometry/base/RL_hip/RL_thigh/RL_calf>
                             point3f physics:localPos0 = (0.418, -5.551115e-17, 0.139854)
                             point3f physics:localPos1 = (0, 0, 0)
                             quatf physics:localRot0 = (1, 0, 0, 0)
@@ -777,8 +777,8 @@ def Xform "pegasus_description"
 
                             def PhysicsFixedJoint "PhysicsFixedJoint"
                             {
-                                rel physics:body0 = </pegasus_description/Geometry/torso/RL_hip/RL_thigh/RL_calf>
-                                rel physics:body1 = </pegasus_description/Geometry/torso/RL_hip/RL_thigh/RL_calf/RL_foot>
+                                rel physics:body0 = </pegasus_description/Geometry/base/RL_hip/RL_thigh/RL_calf>
+                                rel physics:body1 = </pegasus_description/Geometry/base/RL_hip/RL_thigh/RL_calf/RL_foot>
                                 point3f physics:localPos0 = (0.427146, 0, -1.110223e-16)
                                 point3f physics:localPos1 = (0, 0, 0)
                                 quatf physics:localRot0 = (1, 0, 0, 0)
@@ -826,8 +826,8 @@ def Xform "pegasus_description"
                     uniform double mjc:damping = 0.0632
                     uniform double mjc:frictionloss = 2.4903
                     uniform token physics:axis = "Z"
-                    rel physics:body0 = </pegasus_description/Geometry/torso>
-                    rel physics:body1 = </pegasus_description/Geometry/torso/RR_hip>
+                    rel physics:body0 = </pegasus_description/Geometry/base>
+                    rel physics:body1 = </pegasus_description/Geometry/base/RR_hip>
                     point3f physics:localPos0 = (-0.334, -0.163, 0)
                     point3f physics:localPos1 = (0, 0, 0)
                     quatf physics:localRot0 = (0, -0.7071068, 0, 0.7071067)
@@ -873,8 +873,8 @@ def Xform "pegasus_description"
                         uniform double mjc:damping = 0.1404
                         uniform double mjc:frictionloss = 2.9339
                         uniform token physics:axis = "Z"
-                        rel physics:body0 = </pegasus_description/Geometry/torso/RR_hip>
-                        rel physics:body1 = </pegasus_description/Geometry/torso/RR_hip/RR_thigh>
+                        rel physics:body0 = </pegasus_description/Geometry/base/RR_hip>
+                        rel physics:body1 = </pegasus_description/Geometry/base/RR_hip/RR_thigh>
                         point3f physics:localPos0 = (2.220446e-16, 0.0095, -0.1045)
                         point3f physics:localPos1 = (0, 0, 0)
                         quatf physics:localRot0 = (0.7071068, -0.7071067, 5.551115e-17, 1.110223e-16)
@@ -931,8 +931,8 @@ def Xform "pegasus_description"
                             uniform double mjc:damping = 0.8434
                             uniform double mjc:frictionloss = 4.1311
                             uniform token physics:axis = "Z"
-                            rel physics:body0 = </pegasus_description/Geometry/torso/RR_hip/RR_thigh>
-                            rel physics:body1 = </pegasus_description/Geometry/torso/RR_hip/RR_thigh/RR_calf>
+                            rel physics:body0 = </pegasus_description/Geometry/base/RR_hip/RR_thigh>
+                            rel physics:body1 = </pegasus_description/Geometry/base/RR_hip/RR_thigh/RR_calf>
                             point3f physics:localPos0 = (0.418, 0, -0.139854)
                             point3f physics:localPos1 = (0, 0, 0)
                             quatf physics:localRot0 = (1, 0, 0, 0)
@@ -962,8 +962,8 @@ def Xform "pegasus_description"
 
                             def PhysicsFixedJoint "PhysicsFixedJoint"
                             {
-                                rel physics:body0 = </pegasus_description/Geometry/torso/RR_hip/RR_thigh/RR_calf>
-                                rel physics:body1 = </pegasus_description/Geometry/torso/RR_hip/RR_thigh/RR_calf/RR_foot>
+                                rel physics:body0 = </pegasus_description/Geometry/base/RR_hip/RR_thigh/RR_calf>
+                                rel physics:body1 = </pegasus_description/Geometry/base/RR_hip/RR_thigh/RR_calf/RR_foot>
                                 point3f physics:localPos0 = (0.427146, 0, 0)
                                 point3f physics:localPos1 = (0, 0, 0)
                                 quatf physics:localRot0 = (1, 0, 0, 0)

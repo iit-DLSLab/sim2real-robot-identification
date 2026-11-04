@@ -139,6 +139,15 @@ def _rewrite_actuators_as_general(
     actuator_gains: dict[str, tuple[float, float]] | None = None,
 ) -> None:
     actuator_element = root.find("actuator")
+    # Removing <motor> tags also drops the top-level <default><motor .../>, so
+    # carry its delay settings over; per-actuator attributes override them.
+    delay_attributes = ("delay", "nsample", "interp")
+    default_motor = root.find("default/motor")
+    default_delay = {
+        key: default_motor.get(key)
+        for key in delay_attributes
+        if default_motor is not None and default_motor.get(key) is not None
+    }
     # Preserve actuator order, transmission and limits when replacing motor tags.
     source_actuators: list[dict[str, str]] = []
     if actuator_element is not None:
@@ -156,6 +165,10 @@ def _rewrite_actuators_as_general(
             actuator_name = actuator.get("name")
             if actuator_name is not None:
                 actuator_spec["name"] = actuator_name
+            for key in delay_attributes:
+                value = actuator.get(key, default_delay.get(key))
+                if value is not None:
+                    actuator_spec[key] = value
             source_actuators.append(actuator_spec)
 
     _remove_all_by_tag(root, "motor")

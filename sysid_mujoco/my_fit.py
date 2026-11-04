@@ -137,7 +137,7 @@ def parse_args() -> argparse.Namespace:
         nargs=2,
         type=float,
         metavar=("LOWER", "UPPER"),
-        default=(0.001, 6.0),
+        default=(0.01, 7.0),
         help="Bounds for each joint damping parameter.",
     )
     parser.add_argument(
@@ -153,7 +153,7 @@ def parse_args() -> argparse.Namespace:
         nargs=2,
         type=float,
         metavar=("LOWER", "UPPER"),
-        default=(0.001, 6.0),
+        default=(0.001, 7.0),
         help="Bounds for each joint frictionloss parameter.",
     )
     parser.add_argument(

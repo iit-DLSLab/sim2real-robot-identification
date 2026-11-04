@@ -13,7 +13,7 @@ def Xform "pegasus_description"
 {
     def Scope "Geometry"
     {
-        def Xform "torso"
+        def Xform "base"
         {
             quatf xformOp:orient = (1, 0, 0, 0)
             float3 xformOp:scale = (1, 1, 1)
