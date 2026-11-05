@@ -8,7 +8,7 @@
 
 import argparse
 
-from isaaclab.app import AppLauncher
+from isaaclab.app import add_launcher_args, launch_simulation
 
 import sys
 from pathlib import Path
@@ -86,8 +86,8 @@ parser.add_argument(
     metavar=("LOWER", "UPPER"),
     help="Bounds of the multipliers of the principal second moments of the mass distribution (log scale).",
 )
-# append AppLauncher cli args
-AppLauncher.add_app_launcher_args(parser)
+# append launcher cli args
+add_launcher_args(parser)
 # parse the arguments; leftover Hydra-style tokens (e.g. `physics=physx`) select presets
 args_cli, unknown_args = parser.parse_known_args()
 # presets written after a list option are parsed as items of the list: move them back
@@ -99,10 +99,6 @@ for list_option in ("inertial_bodies", "dataset"):
 preset_overrides = [arg for arg in unknown_args if not arg.startswith("-")]
 if len(preset_overrides) != len(unknown_args):
     parser.error(f"unrecognized arguments: {' '.join(arg for arg in unknown_args if arg.startswith('-'))}")
-
-# launch omniverse app
-app_launcher = AppLauncher(args_cli)
-simulation_app = app_launcher.app
 
 """Rest everything follows."""
 
@@ -348,12 +344,8 @@ class BackendAgnosticOTOptimizer(BackendAgnosticSimulatorMixin, OTSinkhornOptimi
         self._print_body_params(self.get_plausible_sim_params())
 
 
-def main():
+def main(env_cfg):
     """Zero actions agent with Isaac Lab environment."""
-    # parse configuration
-    env_cfg = parse_env_cfg(
-        args_cli.task, device=args_cli.device, num_envs=args_cli.num_envs, overrides=preset_overrides
-    )
 
     # every candidate replays all the trajectories, each in its own group of envs
     if args_cli.dataset:
@@ -452,7 +444,7 @@ def main():
 
     counter = 0
     # simulate environment
-    while simulation_app.is_running():
+    while True:
         # run everything in inference mode
         with torch.inference_mode():
             # each group of envs tracks its own trajectory
@@ -479,7 +471,10 @@ def main():
 
 
 if __name__ == "__main__":
-    # run the main function
-    main()
-    # close sim app
-    simulation_app.close()
+    # parse configuration
+    env_cfg = parse_env_cfg(
+        args_cli.task, device=args_cli.device, num_envs=args_cli.num_envs, overrides=preset_overrides
+    )
+    # start only the runtime the task needs (Kit is launched only for Isaac Sim PhysX / Kit visualizers)
+    with launch_simulation(env_cfg, args_cli):
+        main(env_cfg)

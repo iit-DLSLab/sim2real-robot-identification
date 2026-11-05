@@ -20,3 +20,6 @@ ros2_ws/log/
 
 sysid_mujoco/generated/
 sysid_mujoco/results/
+
+# Pixi
+.pixi/

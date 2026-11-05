@@ -76,9 +76,9 @@ Verificato in Isaac Sim (isaaclab3_env, Newton, CMA-ES):
 - stesso dataset una volta con 32 env e due volte con 64 env: punteggi identici per 4 iterazioni (0.20388, 0.18030, 0.17776, 0.17137), quindi aggregazione e normalizzazione sono corrette;
 - go2 con i 5 dataset (5 × 12 = 60 env, `trajectory_1` più lunga di 143 passi): gira, circa 11 s per iterazione contro 10 s con una sola traiettoria.
 
-In Isaac Lab 3 si lancia senza `--headless` e senza il `PYTHONPATH` dell'env pixi:
+In Isaac Lab 3 si lancia senza `--headless`, nell'ambiente pixi `isaaclab` (05/11/2026: `my_fit.py` usa `launch_simulation` invece di `AppLauncher`, quindi gira senza Isaac Sim sia con Newton sia con `physics=physx`, che senza Kit usa OvPhysX):
 ```bash
-env -u PYTHONPATH ~/miniforge3/envs/isaaclab3_env/bin/python sysid_isaaclab/my_fit.py  # CMA-ES di default, --optimizer ot per l'OT
+pixi run -e isaaclab python sysid_isaaclab/my_fit.py  # CMA-ES di default, --optimizer ot per l'OT
 ```
 
 ## Prossimi passi
