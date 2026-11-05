@@ -31,22 +31,28 @@ The models (usd and xml) identified so far can be found in the folder **robot_mo
 <!-- model-dates:end -->
 
 ## Installation
-1. install [miniforge](https://github.com/conda-forge/miniforge/releases) (x86_64 or arm64 depending on your platform) or [pixi](https://pixi.prefix.dev/latest/installation/) - the latter for full reproducibility.
-
-2. create an environment using one of the files in the folder [installation](./deploy/installation):
+1. Install [pixi](https://pixi.prefix.dev/latest/installation/) and clone this repository with its submodule (PACE):
 
 ```bash
-# for conda
-conda env create -f mamba_environment_humble.yaml #for humble
-conda env create -f mamba_environment_lyrical.yaml #for lyrical
-conda activate sim2real_robot_identification_env
-
-# for pixi 
-pixi shell --manifest-path installation/pixi.toml -e humble #for humble
-pixi shell --manifest-path installation/pixi.toml -e lyrical #for lyrical
+git clone --recursive https://github.com/iit-DLSLab/sim2real-robot-identification.git
+# or, in an existing clone
+git submodule update --init
 ```
 
-4. install IsaacLab and pace-sim2real (that is a submodule of this repo) if you need it
+2. Activate the environment you need from anywhere inside the repo (it uses [pixi.toml](./pixi.toml) in the repo root). The first run creates it:
+
+```bash
+# data collection with ROS2 humble, and the calibration in Mujoco
+pixi shell -e humble
+
+# data collection with ROS2 lyrical, and the calibration in Mujoco
+pixi shell -e lyrical
+
+# calibration in IsaacLab (Isaac Lab 3.0 from PyPI, no Isaac Sim, and PACE from the submodule)
+pixi shell -e isaaclab
+```
+
+The `isaaclab` environment is separate because Isaac Lab 3.0 requires MuJoCo 3.12, while the calibration in Mujoco uses MuJoCo 3.13. It requires Ubuntu 22.04 or newer (glibc >= 2.35).
 
 ## Run a collection
 This repo works best with [unitree-ros2-dls](https://github.com/iit-DLSLab/unitree-ros2-dls) for communicating with unitree go2, b2, a2, aliengo and z1 robots, and with [piper-ros2-dls2](https://github.com/iit-DLSLab/piper-ros2-dls2) for the agilex piper arm.
@@ -84,7 +90,7 @@ python3 datasets/plot_joint_trajectories.py
 
 ## Run a calibration in IsaacLab
 
-Add a new [task](./sysid_isaaclab/tasks) for a new robot. Then
+Add a new [task](./sysid_isaaclab/tasks) for a new robot. Then, in `pixi shell -e isaaclab`
 
 ```bash
 python3 sysid_isaaclab/my_fit.py                   # CMA-ES (default): one best combination
@@ -101,6 +107,8 @@ With both optimizers, the joint parameters are searched linearly within their bo
 - `--identify-link-mass`, `--identify-center-of-mass` (mass + CoM) and `--identify-inertia-tensor` (mass + CoM + inertia) also identify the inertial parameters of the bodies, with the same options of the MuJoCo fit (`--inertial-bodies`, `--tie-quadruped-inertias`, bounds). They are corrections of the nominal USD values: mass scale, CoM offset in the body frame (mirrored between legs when tied) and scales of the principal second moments of the mass distribution, so every value within the bounds is a physically consistent body. The identified values are saved in `body_params.pt` (CMA-ES) or under `inertial` in `plausible_params.pt` (OT). On Newton, Isaac Lab warns that runtime CoM changes may be unstable: prefer `physics=physx` with `--identify-center-of-mass`.
 
 ## Run a calibration in Mujoco
+
+In `pixi shell -e humble` (or `lyrical`):
 
 ```bash
 python3 sysid_mujoco/my_fit.py 
