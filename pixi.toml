@@ -24,6 +24,9 @@ catkin_tools = "*"
 rosdep = "*"
 tqdm = "*"
 gymnasium = "*"
+# viskores 1.2 (pcl -> vtk-base) pulls conda's mesalib, which shadows the system GL
+# drivers: the MuJoCo viewer then fails on Wayland ("EGL: Failed to get EGL display")
+viskores = "<1.2"
 
 [feature.common.pypi-dependencies]
 readchar = "*"
@@ -77,6 +80,8 @@ index-strategy = "unsafe-best-match"
 dependency-overrides = { packaging = ">=20,<27" }
 
 [environments]
+# `pixi shell` with no -e activates lyrical (same solve group, so identical package versions)
+default = { features = ["common", "lyrical"], solve-group = "lyrical" }
 humble = ["common", "humble"]
-lyrical = ["common", "lyrical"]
+lyrical = { features = ["common", "lyrical"], solve-group = "lyrical" }
 isaaclab = ["isaaclab"]

@@ -40,6 +40,7 @@ from rclpy.node import Node
 from dls2_interface.msg import BlindState, ControlSignal
 
 import time
+import gc
 import numpy as np
 np.set_printoptions(precision=3, suppress=True)
 
@@ -423,13 +424,30 @@ class Data_Collection_Node(Node):
 
 
 
+def create_executor():
+    # EventsExecutor dispatches the callbacks in C++ (rclpy >= Kilted), with much less overhead than the
+    # default SingleThreadedExecutor. It does not exist on Humble, where we fall back to SingleThreadedExecutor
+    try:
+        from rclpy.experimental import EventsExecutor
+        print("Using EventsExecutor")
+        return EventsExecutor()
+    except ImportError:
+        from rclpy.executors import SingleThreadedExecutor
+        print("EventsExecutor not available in this ROS 2 distro, using SingleThreadedExecutor")
+        return SingleThreadedExecutor()
+
+
 #---------------------------
 if __name__ == '__main__':
     print('Hello from your lovely data_collection routine.')
     rclpy.init()
     data_collection_node = Data_Collection_Node()
+    # Move everything allocated at startup (modules, model, node) out of the garbage collector:
+    # otherwise its full collections scan all of them and stall the control loop for tens of ms
+    gc.collect()
+    gc.freeze()
 
-    rclpy.spin(data_collection_node)
+    rclpy.spin(data_collection_node, create_executor())
     data_collection_node.destroy_node()
     rclpy.shutdown()
 

@@ -42,11 +42,11 @@ git submodule update --init
 2. Activate the environment you need from anywhere inside the repo (it uses [pixi.toml](./pixi.toml) in the repo root). The first run creates it:
 
 ```bash
+# data collection with ROS2 lyrical, and the calibration in Mujoco (default environment)
+pixi shell   # same as: pixi shell -e lyrical
+
 # data collection with ROS2 humble, and the calibration in Mujoco
 pixi shell -e humble
-
-# data collection with ROS2 lyrical, and the calibration in Mujoco
-pixi shell -e lyrical
 
 # calibration in IsaacLab (Isaac Lab 3.0 from PyPI, no Isaac Sim, and PACE from the submodule)
 pixi shell -e isaaclab
