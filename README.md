@@ -93,18 +93,11 @@ python3 datasets/plot_joint_trajectories.py
 Add a new [task](./sysid_isaaclab/tasks) for a new robot. Then, in `pixi shell -e isaaclab`
 
 ```bash
-python3 sysid_isaaclab/my_fit.py                   # CMA-ES (default): one best combination
-python3 sysid_isaaclab/my_fit.py --optimizer ot    # a set of plausible combinations
+python3 sysid_isaaclab/my_fit.py    # CMA-ES: one best combination
 ```
 
-With `--optimizer ot`, a diversity-regularized version of the optimal-transport optimizer of [arXiv:2605.02147](https://arxiv.org/abs/2605.02147) ([ot_optimizer.py](./sysid_isaaclab/ot_optimizer.py)) returns `num_particles` parameter combinations $\Theta$ solving
-
-$$\min_{\Theta}\ \frac{1}{N}\sum_i \frac{L(\theta_i)}{L_{best}} - \lambda\, D(\Theta) \quad \text{s.t.} \quad L(\theta_i) \le (1 + \text{loss\_tolerance})\, L_{best}$$
-
-where $D$ is a log-det (DPP) diversity. They are saved in `plausible_params.pt` in the log folder, and the per-joint range of every parameter over the set is printed at the end (a wide range means that parameter is not identifiable from the data). The defaults are in `OTSinkhornOptimizerCfg`; to change them for a robot, add a field to its `PaceCfg`, e.g. `ot: OTSinkhornOptimizerCfg = OTSinkhornOptimizerCfg(num_particles=64, loss_tolerance=0.05)`.
-
-With both optimizers, the joint parameters are searched linearly within their bounds, as in PACE, and:
-- `--identify-link-mass`, `--identify-center-of-mass` (mass + CoM) and `--identify-inertia-tensor` (mass + CoM + inertia) also identify the inertial parameters of the bodies, with the same options of the MuJoCo fit (`--inertial-bodies`, `--tie-quadruped-inertias`, bounds). They are corrections of the nominal USD values: mass scale, CoM offset in the body frame (mirrored between legs when tied) and scales of the principal second moments of the mass distribution, so every value within the bounds is a physically consistent body. The identified values are saved in `body_params.pt` (CMA-ES) or under `inertial` in `plausible_params.pt` (OT). On Newton, Isaac Lab warns that runtime CoM changes may be unstable: prefer `physics=physx` with `--identify-center-of-mass`.
+The joint parameters are searched linearly within their bounds, as in PACE, and:
+- `--identify-link-mass`, `--identify-center-of-mass` (mass + CoM) and `--identify-inertia-tensor` (mass + CoM + inertia) also identify the inertial parameters of the bodies, with the same options of the MuJoCo fit (`--inertial-bodies`, `--tie-quadruped-inertias`, bounds). They are corrections of the nominal USD values: mass scale, CoM offset in the body frame (mirrored between legs when tied) and scales of the principal second moments of the mass distribution, so every value within the bounds is a physically consistent body. The identified values are saved in `body_params.pt`. On Newton, Isaac Lab warns that runtime CoM changes may be unstable: prefer `physics=physx` with `--identify-center-of-mass`.
 
 ## Run a calibration in Mujoco
 

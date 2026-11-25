@@ -23,13 +23,6 @@ parser = argparse.ArgumentParser(description="Pace agent for Isaac Lab environme
 parser.add_argument("--num_envs", type=int, default=8192, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default=task_name, help="Name of the task.")
 parser.add_argument(
-    "--optimizer",
-    type=str,
-    default="cmaes",
-    choices=["cmaes", "ot"],
-    help="cmaes: single best combination (PACE). ot: set of plausible combinations (diversity-regularized optimal transport).",
-)
-parser.add_argument(
     "--dataset",
     nargs="+",
     default=None,
@@ -120,7 +113,6 @@ from tasks import register_my_tasks
 
 from pace_sim2real.utils import project_root
 from pace_sim2real import CMAESOptimizer
-from ot_optimizer import OTSinkhornOptimizer, OTSinkhornOptimizerCfg
 from inertial_params import BodyParams
 
 
@@ -171,7 +163,7 @@ def expand_data_files(entries, base_dir):
 def load_trajectories(data_files, device):
     """Stack the recorded trajectories, padded to the longest one by holding their last sample.
 
-    Returns the first dataset (logged by the optimizers), the target and measured joint positions (K, T, J) and
+    Returns the first dataset (logged by the optimizer), the target and measured joint positions (K, T, J) and
     the mask of the recorded steps (K, T), which excludes the padding from the score.
     """
     # Dataset files are trusted and may contain non-tensor Python objects.
@@ -229,7 +221,7 @@ class BackendAgnosticSimulatorMixin:
         bias = self.sim_params[:, self.bias_idx].repeat(self.num_trajectories, 1)
         error = torch.sum(torch.square(sim_dof_pos - real_dof_pos - bias), dim=1) * recorded
         self.scores += error.view(self.num_trajectories, num_candidates).sum(dim=0) * self.score_scale
-        # the best trajectory saved by the optimizers is the one of the first dataset
+        # the best trajectory saved by the optimizer is the one of the first dataset
         if self.scores_counter < self.sim_dof_pos_buffer.shape[1]:
             self.sim_dof_pos_buffer[:, self.scores_counter, :] = sim_dof_pos[:num_candidates]
         self.scores_counter += 1
@@ -330,20 +322,6 @@ class BackendAgnosticCMAESOptimizer(BackendAgnosticSimulatorMixin, CMAESOptimize
             torch.save(self.body_params.to_dict(mean[None, self.body_params.slice]), os.path.join(self.writer.log_dir, "body_params.pt"))
 
 
-class BackendAgnosticOTOptimizer(BackendAgnosticSimulatorMixin, OTSinkhornOptimizer):
-    """Diversity-regularized OT optimizer that writes joint params through APIs shared by PhysX and Newton."""
-
-    def _plausible_dict(self):
-        plausible = super()._plausible_dict()
-        if self.body_params is not None:
-            plausible["inertial"] = self.body_params.to_dict(plausible["sim_params"][:, self.body_params.slice])
-        return plausible
-
-    def _print_plausible_set(self):
-        super()._print_plausible_set()
-        self._print_body_params(self.get_plausible_sim_params())
-
-
 def main(env_cfg):
     """Zero actions agent with Isaac Lab environment."""
 
@@ -403,40 +381,24 @@ def main(env_cfg):
     time_steps = target_dof_pos.shape[1]
     sim_dt = env.unwrapped.sim.cfg.dt
 
-    if args_cli.optimizer == "cmaes":
-        opt = BackendAgnosticCMAESOptimizer(
-            bounds=bounds_params,
-            population_size=num_candidates,
-            log_dir=log_dir,
-            joint_order=joint_order,
-            max_iteration=env_cfg.sim2real.cmaes.max_iteration,
-            data=data,
-            device=env.unwrapped.device,
-            epsilon=env_cfg.sim2real.cmaes.epsilon,
-            sigma=env_cfg.sim2real.cmaes.sigma,
-            save_interval=env_cfg.sim2real.cmaes.save_interval,
-            save_optimization_process=env_cfg.sim2real.cmaes.save_optimization_process,
-            separate_dynamic_friction=env_cfg.sim2real.separate_dynamic_friction,
-            recorded_steps=recorded_steps,
-            log_scale=log_scale,
-            body_params=body_params,
-        )
-    else:
-        # a task can tune the optimizer by adding an `ot: OTSinkhornOptimizerCfg` field to its PaceCfg
-        opt = BackendAgnosticOTOptimizer(
-            bounds=bounds_params,
-            batch_size=num_candidates,
-            log_dir=log_dir,
-            joint_order=joint_order,
-            data=data,
-            device=env.unwrapped.device,
-            cfg=getattr(env_cfg.sim2real, "ot", None) or OTSinkhornOptimizerCfg(),
-            separate_dynamic_friction=env_cfg.sim2real.separate_dynamic_friction,
-            recorded_steps=recorded_steps,
-            log_scale=log_scale,
-            body_params=body_params,
-        )
-    # the optimizers log the first dataset only
+    opt = BackendAgnosticCMAESOptimizer(
+        bounds=bounds_params,
+        population_size=num_candidates,
+        log_dir=log_dir,
+        joint_order=joint_order,
+        max_iteration=env_cfg.sim2real.cmaes.max_iteration,
+        data=data,
+        device=env.unwrapped.device,
+        epsilon=env_cfg.sim2real.cmaes.epsilon,
+        sigma=env_cfg.sim2real.cmaes.sigma,
+        save_interval=env_cfg.sim2real.cmaes.save_interval,
+        save_optimization_process=env_cfg.sim2real.cmaes.save_optimization_process,
+        separate_dynamic_friction=env_cfg.sim2real.separate_dynamic_friction,
+        recorded_steps=recorded_steps,
+        log_scale=log_scale,
+        body_params=body_params,
+    )
+    # the optimizer logs the first dataset only
     update_run_config(opt.writer.log_dir, data_files=[str(data_file) for data_file in data_files])
 
     env.reset()
